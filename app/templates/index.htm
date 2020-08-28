@@ -1,0 +1,10 @@
+{% extends "base.htm" %}
+
+{% block app_content}
+<form method="get" action="{{ url_for('pages.search') }}">
+	<p>{{ form.q }}</p>
+</form>
+
+{% for user in users %}
+<p>{{ user.name }}</p>
+{% endfor %}

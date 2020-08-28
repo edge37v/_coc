@@ -1,0 +1,22 @@
+{% extends "base.htm" %}
+
+{% block content %}
+<div class="say">Set Up Your Profile</div>
+<form action="" method="post" enctype="multipart/form-data">
+	{{ form.hidden_tag() }}
+	
+	<p class="form_label">{{ form.name.label }}</p>
+	<p class="form_input">{{ form.name(size=123) }}</p>
+	{% for error in form.name.errors %}
+	<p class="error">{{ error }}</p>
+	{% endfor %}
+
+	<p class="form_label">{{ form.about.label }}</p>
+	<p class="form_input">{{ form.about(size=123) }}</p>
+	{% for error in form.about.errors %}
+	<p class="error">{{ error }}</p>
+	{% endfor %}
+
+	<p>{{ form.submit() }}</p>
+</form>
+{% endblock %}

@@ -1,0 +1,51 @@
+{% block title %}
+	{% if title %}
+		<title>{{ title }} - MarketLnx</title>
+	{% else %}
+		<title>MarketLnx</title>
+	{% endif %}
+{% endblock %}
+
+{% block head %}
+	<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+	<head>
+  <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+</head>
+{% endblock %}
+
+{% block navbar %}
+		<ul class="nav_bar">
+			<a href="{{ url_for('pages.index') }}" class="home"><img src="{{ url_for('static', filename='logos/lnx.png') }}", width="21px"></a>
+			<div class="auth_links">
+				{% if current_user.is_anonymous %}
+					<li><a href="{{ url_for('auth.register') }}" class="user_link">SIGN UP</a></li>
+					<li><a href="{{ url_for('auth.login') }}" class="user_link">LOG IN</a></li>
+				{% else %}
+					{% if user == current_user %}
+						<li><a href="{{ url_for('auth.edit_user') }}" class="user_link">EDIT PROFILE</a></li>
+					{% endif %}
+					<li><a href="{{ url_for('auth.logout') }}" class="user_link">LOG OUT</a></li>
+				{% endif %}
+			</div>
+		</ul>
+{% endblock %}
+
+{% block content %}
+	<div class="container">
+		{% with messages = get_flashed_messages() %}
+		{% if messages %}
+		{% for message in messages %}
+			<p class="flashed_messages" style="color: white;">{{ message }}</p>
+		{% endfor %}
+		{% endif %}
+		{% block app_content %}{% endblock %}
+		{% endwith %}
+	</div>
+{% endblock %}
+
+{% block scripts %}
+	{{ super() }}
+	{{ moment.include_moment() }}
+{% endblock %}
