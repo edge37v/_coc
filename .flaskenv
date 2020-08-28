@@ -1,2 +1,1 @@
 FLASK_APP=marketlnx.py
-FLASK_ENV=development
