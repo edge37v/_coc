@@ -5,9 +5,10 @@ import base64, os, jwt
 from time import time
 from flask import jsonify, current_app, request, url_for
 from app import db, login
-from flask_login import UserMixin, AnonymousUserMixin
+from flask_login import UserMixin
 from datetime import datetime, timedelta
 from werkzeug.security import check_password_hash, generate_password_hash
+from app.l_models import lesson_subject, lesson_level, lesson_year, lesson_module, Lesson, Subject, Year, Module, Level, LPlan
 
 class PaginatedAPIMixin(object):
     @staticmethod
@@ -75,6 +76,8 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         ps_id = db.Column(db.Integer)
         ps_code = db.Column(db.String())
         ps_email = db.Column(db.Unicode())
+        lplans = db.relationship('LPlan', secondary=user_lplans, backref=db.backref('users', lazy=True), lazy=True)
+        lesson_progress = db.Column(db.Unicode())
         cards = db.relationship(Card, backref='user', lazy='dynamic')
         logo_url = db.Column(db.String())
         email = db.Column(db.Unicode(123), unique=True)
