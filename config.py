@@ -1,8 +1,11 @@
 import os
+from dotenv import load_dotenv
+
 basedir = os.path.abspath(os.path.dirname(__file__))
+load_dotenv(os.path.join(basedir, '.env'))
 
 class Config(object):
-    PAK= 'sk_live_2567f775551d1f3e53665e529791d2e68072d213'
+    PSK= 'sk_live_2567f775551d1f3e53665e529791d2e68072d213'
     SECRET_KEY='dev'
     USERS_PER_PAGE = 10
     ELASTICSEARCH_URL = os.environ.get('ELASTICSEARCH_URL')

@@ -52,7 +52,7 @@ def create_app():
 
     from .models import User
 
-    if not app.debug:
+    if not app.debug and not app.testing:
         if app.config['MAIL_SERVER']:
             auth = None
             if app.config['MAIL_USERNAME'] or app.config['MAIL_PASSWORD']:
@@ -79,12 +79,8 @@ def create_app():
         app.logger.addHandler(file_handler)
 
         app.logger.setLevel(logging.INFO)
-        applogger.info('Marketlnx startup')
+        app.logger.info('Marketlnx startup')
 
-        return app
-
-    @babel.localeselector
-    def get_locale():
-        return request.accept_languages.best_match(app.config['LANGUAGES'])
+    return app
 
 from app import models
