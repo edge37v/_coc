@@ -1,6 +1,6 @@
 from flask import g, abort, jsonify, request, url_for
 from app import db
-from app.models import User, Lesson
+from app.models import User, Lesson, Lplan
 from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request
@@ -63,5 +63,5 @@ def lesson(sb, position):
 def get_plans():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
-    data = Plan.to_collection_dict(Plan.query.all(), page, per_page, api.get_plans)
+    data = Lplan.to_collection_dict(Plan.query.all(), page, per_page, api.get_plans)
     return jsonify(data)

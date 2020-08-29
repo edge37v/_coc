@@ -91,12 +91,12 @@ class UserQuery(BaseQuery, SearchQueryMixin):
 
 class User(PaginatedAPIMixin, UserMixin, db.Model):
         query_class = UserQuery
-        #search_vector = db.Column(TSVectorType('description', 'name'))
+        search_vector = db.Column(TSVectorType('description', 'name'))
         id = db.Column(db.Integer, primary_key=True)
         ps_id = db.Column(db.Integer)
         ps_code = db.Column(db.String())
         ps_email = db.Column(db.Unicode())
-        lplans = db.relationship('LPlan', secondary=user_lplans, backref=db.backref('users', lazy=True), lazy=True)
+        lplans = db.relationship('Lplan', secondary=user_lplans, backref=db.backref('users', lazy=True), lazy=True)
         lesson_progress = db.Column(db.Unicode())
         cards = db.relationship(Card, backref='user', lazy='dynamic')
         logo_url = db.Column(db.String())
@@ -167,7 +167,8 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 'about': self.about,
                 '_links': {
                     'self': url_for('api.get_user', id = self.id)
-                }
+                },
+                'plans': 'TODO'
             }
             if include_email:
                 data['email'] = self.email
@@ -180,6 +181,18 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 if 'password' in data:
                     self.set_password(data['password'])
 
+        def subscribe(self, plan):
+            if not self.subscribed(plan):
+                self.plans.append(plan)
+
+        def unssubscribe(self, plan):
+            if not self.subscribed(plan):
+                self.plans.append(plan)
+
+        def subscribed(self, plan):
+            return self.plans.filter(
+                user_plans.c.plan_id == plan.id).count() > 0
+
 class MPlan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ps_id = db.Column(db.Integer)
@@ -187,7 +200,7 @@ class MPlan(db.Model):
     amount = db.Column(db.Unicode())
     period = db.Column(db.Unicode())
 
-    def to_dict(self)
+    def to_dict(self):
         data = {
             'id': self.id,
             'ps_id': self.ps_id,

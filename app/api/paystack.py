@@ -1,7 +1,7 @@
 from flask import request, jsonify
 from app import db
 from app.api import bp
-from app.models import User, Card, MPlan as Plan
+from app.models import User, Card, Lplan
 from app.api.auth import token_auth
 from pypaystack import Transaction, Customer, Plan
 import json
