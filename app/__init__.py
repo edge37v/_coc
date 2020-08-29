@@ -82,5 +82,3 @@ def create_app():
         app.logger.info('Marketlnx startup')
 
     return app
-
-from app import models

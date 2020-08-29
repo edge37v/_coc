@@ -1,7 +1,7 @@
 from flask import request, jsonify
 from app import db
 from app.api import bp
-from app.models import User, Card, Plan as db_Plan
+from app.models import User, Card, MPlan as Plan
 from app.api.auth import token_auth
 from pypaystack import Transaction, Customer, Plan
 import json
@@ -66,9 +66,9 @@ def charge_user_monthly():
 @bp.route('/create_plan', methods=['POST'])
 def create_plan():
     data = request.get_json() or {}
-    db_plan = db_Plan()
-    db_plan.from_dict(data)
-    db.session.add(db_plan)
+    mplan = MPlan()
+    mplan.from_dict(data)
+    db.session.add(mplan)
     db.session.commit()
     plan = Plan(authorization_key=sk)
     response = plan.create(db_plan.name, db_plan.amount, db_plan.period)

@@ -65,6 +65,23 @@ class Card(db.Model):
         for field in ['authorization_code', 'card_type', 'last4', 'exp_month', 'exp_year', 'bin', 'bank', 'signature', 'reusable', 'country_code']:
             setattr(self, field, data[field])
 
+class Lplan(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ps_id = db.Column(db.Integer())
+    name = db.Column(db.Unicode())
+    amount = db.Column(db.Unicode())
+    period = db.Column(db.Unicode())
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'ps_id': self.ps_id,
+            'name': self.name,
+            'amount': self.amount,
+            'period': self.period
+        }
+        return data
+
 user_lplans = db.Table('user_lplans',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('lplan_id', db.Integer, db.ForeignKey('lplan.id')))
@@ -163,7 +180,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 if 'password' in data:
                     self.set_password(data['password'])
 
-class Plan(db.Model):
+class MPlan(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ps_id = db.Column(db.Integer)
     name = db.Column(db.Unicode())
@@ -228,6 +245,8 @@ class Lesson(PaginatedAPIMixin, db.Model):
             'worksheet_answers_url': self.worksheet_answers_url
         }
 
+        return data
+
     def createl_url(self):
         s = Subject.query.join(lesson_subject, (lesson_subject.c.lesson_id == self.id)).first()
         y = Year.query.join(lesson_year, (lesson_year.c.lesson_id == self.id)).first()
@@ -247,6 +266,8 @@ class Subject(PaginatedAPIMixin, db.Model):
             'name': self.name
         }
 
+        return data
+
     def __repr__(self):
             return '<Subject {}>'.format(self.name)
 
@@ -261,6 +282,8 @@ class Year(PaginatedAPIMixin, db.Model):
             'sid': self.sid,
             'name': self.name
         }
+
+        return data
 
     def __repr__(self):
             return '<Grade {}>'.format(self.name)
@@ -277,6 +300,8 @@ class Module(PaginatedAPIMixin, db.Model):
             'name': self.name
         }
 
+        return data
+
     def __repr__(self):
             return '<Module {}>'.format(self.name)
 
@@ -292,21 +317,7 @@ class Level(PaginatedAPIMixin, db.Model):
             'name': self.name
         }
 
+        return data
+
     def __repr__(self):
             return '<Level {}>'.format(self.name)
-
-class LPlan(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    ps_id = db.Column(db.Integer)
-    name = db.Column(db.Unicode())
-    amount = db.Column(db.Unicode())
-    period = db.Column(db.Unicode())
-
-    def to_dict(self):
-        data = {
-            'id': self.id,
-            'ps_id': self.ps_id,
-            'name': self.name,
-            'amount': self.amount,
-            'period': self.period
-        }
