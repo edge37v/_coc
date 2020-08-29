@@ -187,6 +187,15 @@ class MPlan(db.Model):
     amount = db.Column(db.Unicode())
     period = db.Column(db.Unicode())
 
+    def to_dict(self)
+        data = {
+            'id': self.id,
+            'ps_id': self.ps_id,
+            'name': self.name,
+            'amount': self.amount,
+            'period': self.period
+        }
+
     def from_dict(self, data):
             for field in ['name', 'amount', 'period']:
                 if field in data:
