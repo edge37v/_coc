@@ -5,7 +5,7 @@ from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request
 
-@bp.route('/lessons/<sb>/', methods=['GET'])
+@bp.route('/apexlnx/lessons/<sb>/', methods=['GET'])
 def lessons_sb(subject):
     query = Lesson.query.filter(Lesson.subject.any(sid=subject))
     per_page = min(request.args.get('per_page', 10, type=int), 100)
@@ -13,7 +13,7 @@ def lessons_sb(subject):
     data = Lesson.to_collection_dict(query, page, per_page, api.lessons_sb)
     return jsonify(data)
 
-@bp.route('/lessons/<sb>/<yr>', methods=['GET'])
+@bp.route('/apexlnx/lessons/<sb>/<yr>', methods=['GET'])
 def lessons_sb_yr(sb, yr):
     query = Lesson.query.filter(
                 Lesson.subject.any(sid=sb)).filter(
@@ -23,7 +23,7 @@ def lessons_sb_yr(sb, yr):
     data = Lesson.to_collection_dict(query, page, per_page, api.lessons_sb_yr)
     return jsonify(data)
 
-@bp.route('/lessons/<sb>/<yr>/<md>', methods=['GET'])
+@bp.route('/apexlnx/lessons/<sb>/<yr>/<md>', methods=['GET'])
 def lessons_sb_yr_md(sb, yr, md):
     query = Lesson.query.filter(
                 Lesson.subject.any(sid=sb)).filter(
@@ -34,7 +34,7 @@ def lessons_sb_yr_md(sb, yr, md):
     data = Lesson.to_collection_dict(query, page, per_page, api.lessons_sb_yr_md)
     return jsonify(data)
 
-@bp.route('/lessons/<sb>/<yr>/<md>/<lv>', methods=['GET'])
+@bp.route('/apexlnx/lessons/<sb>/<yr>/<md>/<lv>', methods=['GET'])
 def lessons_sb_yr_md_lv(sb, yr, md, lv):
     query = Lesson.query.filter(
                 Lesson.subject.any(sid=sb)).filter(
@@ -46,7 +46,7 @@ def lessons_sb_yr_md_lv(sb, yr, md, lv):
     data = Lesson.to_collection_dict(query, page, per_page, api.lessons_sb_yr_md_lv)
     return jsonify(data)
 
-@bp.route('/lessons/<int:id>', methods=['GET'])
+@bp.route('/apexlnx/lessons/<int:id>', methods=['GET'])
 def lesson(sb, position):
     shift = request.args.get('shift', 0, type=float)
     lesson = Lesson.query.filter(
@@ -59,7 +59,7 @@ def lesson(sb, position):
     data = Lesson.to_dict()
     return jsonify(data)
 
-@bp.route('/plans', methods=['GET'])
+@bp.route('/apexlnx/plans', methods=['GET'])
 def get_plans():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
