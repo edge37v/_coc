@@ -5,7 +5,7 @@ from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request
 
-@bp.route('/test')
+@bp.route('/test', methods=['GET'])
 def test():
     return jsonify({'status': 'yep'})
 
