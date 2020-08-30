@@ -5,6 +5,10 @@ from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request
 
+@bp.route('/test')
+def test():
+    return jsonify({'status': 'yep'})
+
 @bp.route('/user_search/<query>')
 #@token_auth.login_required
 def user_search(query):
