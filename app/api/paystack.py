@@ -6,9 +6,9 @@ from app.api.auth import token_auth
 from pypaystack import Transaction, Customer, Plan
 import json
 
-test = ""
+test = "sk_test_8e071e9e820c7e0a10040d3f1124ba59d9b3c2d2"
 live = ""
-sk = "sk_test_8e071e9e820c7e0a10040d3f1124ba59d9b3c2d2"
+sk = test
 
 @bp.route('/paystack/create_card/<int:id>', methods=['POST'])
 def create_card(id):
