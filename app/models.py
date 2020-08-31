@@ -75,8 +75,9 @@ class Plan(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ps_id = db.Column(db.Integer())
     name = db.Column(db.Unicode())
-    amount = db.Column(db.Unicode())
+    amount = db.Column(db.Integer)
     period = db.Column(db.Unicode())
+    service = db.relationship(Service, secondary=plan_services, backref='plan', lazy='dynamic')
 
     def to_dict(self):
         data = {
@@ -85,7 +86,6 @@ class Plan(PaginatedAPIMixin, db.Model):
             'name': self.name,
             'amount': self.amount,
             'period': self.period,
-            'l_year': self.year
         }
         return data
 
@@ -93,12 +93,17 @@ user_plans = db.Table('user_plans',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('plan_id', db.Integer, db.ForeignKey('plan.id')))
 
+user_services = db.Table('user_services',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('service_id', db.Integer, db.ForeignKey('service.id')))
+
 class User(PaginatedAPIMixin, UserMixin, db.Model):
         id = db.Column(db.Integer, primary_key=True)
         ps_id = db.Column(db.Integer)
         ps_code = db.Column(db.String())
         ps_email = db.Column(db.Unicode())
-        plans = db.relationship('Plan', secondary=user_plans, backref=db.backref('users', lazy=True), lazy=True)
+        plans = db.relationship('Plan', secondary=user_plans, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
+        services = db.relationship('Service', secondary=user_services, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
         lesson_progress = db.Column(db.Unicode())
         cards = db.relationship(Card, backref='user', lazy='dynamic')
         logo_url = db.Column(db.String())
@@ -195,6 +200,10 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             return self.plans.filter(
                 user_plans.c.plan_id == plan.id).count() > 0
 
+        def gets_service(self, service):
+            return self.service.filter(
+                user_services.c.service_id == service.id).count() > 0
+
 lesson_subject = db.Table('lesson_subject',
     db.Column('lesson_id', db.Integer, db.ForeignKey('lesson.id'), primary_key=True),
     db.Column('subject_id', db.Integer, db.ForeignKey('subject.id'), primary_key=True)
@@ -245,9 +254,11 @@ class Lesson(PaginatedAPIMixin, db.Model):
             'desc': self.desc,
             'worksheet_url': self.worksheet_url,
             'video_url': self.video_url,
-            'worksheet_answers_url': self.worksheet_answers_url
+            'worksheet_answers_url': self.worksheet_answers_url,
+            'links': {
+                'self': url_for('api.lesson', id=self.id)
+            }
         }
-
         return data
 
     def createl_url(self):

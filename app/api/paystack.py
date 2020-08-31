@@ -1,4 +1,5 @@
-from flask import request, jsonify
+import os
+from flask import request, jsonify, current_app
 from app import db
 from app.api import bp
 from app.models import User, Card, Plan
@@ -6,9 +7,13 @@ from app.api.auth import token_auth
 from pypaystack import Transaction, Customer, Plan
 import json
 
-test = "sk_test_8e071e9e820c7e0a10040d3f1124ba59d9b3c2d2"
-live = ""
-sk = test
+status = os.environ.get('STATUS')
+ptk = 'sk_test_8e071e9e820c7e0a10040d3f1124ba59d9b3c2d2'
+psk = 'sk_live_2567f775551d1f3e53665e529791d2e68072d213'
+if status:
+    sk = psk
+else:
+    sk = ptk
 
 @bp.route('/paystack/create_card/<int:id>', methods=['POST'])
 def create_card(id):
@@ -68,17 +73,5 @@ def charge_user():
         db.session.commit()
     response = transaction.charge(user.email, card.authorization_code, amount)
     user.plans.append(plan)
-    return jsonify(response)
-
-@bp.route('/create_plan', methods=['POST'])
-def create_plan():
-    data = request.get_json() or {}
-    mplan = MPlan()
-    mplan.from_dict(data)
-    db.session.add(mplan)
-    db.session.commit()
-    plan = Plan(authorization_key=sk)
-    response = plan.create(db_plan.name, db_plan.amount, db_plan.period)
-    #db_plan.ps_id = response.id
     return jsonify(response)
 

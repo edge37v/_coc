@@ -3,7 +3,7 @@ from app import db
 from app.models import User, Lesson, Plan, user_plans
 from app.api import bp
 from app.api.auth import token_auth
-from app.api.errors import bad_request
+from app.api.errors import bad_request, payment_required
 
 @bp.route('/apexlnx/lessons/<sb>/', methods=['GET'])
 @token_auth.login_required
@@ -17,6 +17,9 @@ def lessons_sb(subject):
 @bp.route('/apexlnx/lessons/<sb>/<yr>', methods=['GET'])
 @token_auth.login_required
 def lessons_sb_yr(sb, yr):
+    plan = Plan.query.filter_by(l_year=yr).first()
+    if not g.current_user.subscribed(plan):
+        return payment_required('The user needs to pay to access this')
     query = Lesson.query.filter(
                 Lesson.subject.any(sid=sb)).filter(
                     Lesson.year.any(sid=yr))
@@ -28,6 +31,9 @@ def lessons_sb_yr(sb, yr):
 @bp.route('/apexlnx/lessons/<sb>/<yr>/<md>', methods=['GET'])
 @token_auth.login_required
 def lessons_sb_yr_md(sb, yr, md):
+    plan = Plan.query.filter_by(l_year=yr).first()
+    if not g.current_user.subscribed(plan):
+        return payment_required('The user needs to pay to access this')
     query = Lesson.query.filter(
                 Lesson.subject.any(sid=sb)).filter(
                     Lesson.year.any(sid=yr)).filter(
@@ -40,6 +46,9 @@ def lessons_sb_yr_md(sb, yr, md):
 @bp.route('/apexlnx/lessons/<sb>/<yr>/<md>/<lv>', methods=['GET'])
 @token_auth.login_required
 def lessons_sb_yr_md_lv(sb, yr, md, lv):
+    plan = Plan.query.filter_by(l_year=yr).first()
+    if not g.current_user.subscribed(plan):
+        return payment_required('The user needs to pay to access this')
     query = Lesson.query.filter(
                 Lesson.subject.any(sid=sb)).filter(
                     Lesson.year.any(sid=yr)).filter(
@@ -57,7 +66,10 @@ def lesson(sb, position):
     lesson = Lesson.query.filter(
                 Lesson.subject.any(sid=sb)).filter_by(
                     position=position+shift).first()
-    Lesson.query.filter_byposition=position
+    plan = Plan.query.filter_by(l_year=lesson.year).first()
+    if not g.current_user.subscribed(plan):
+        return payment_required('The user needs to pay to access this')
+    #Lesson.query.filter_byposition=position
     shift = request.args.get('shift', 0, type=float)
     g.current_user.lesson_progress = id
     lesson = Lesson.query.get(id)
