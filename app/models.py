@@ -122,7 +122,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         token = db.Column(db.String(32), index=True, unique=True)
         token_expiration = db.Column(db.DateTime)
 
-        def get_token(self, expires_in=3600):
+        def get_token(self, expires_in=36000):
             now = datetime.utcnow()
             if self.token and self.token_expiration > now + timedelta(seconds=60):
                 return self.token
