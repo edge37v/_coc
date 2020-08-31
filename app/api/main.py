@@ -10,7 +10,7 @@ def test():
     return jsonify({'status': 'yep'})
 
 @bp.route('/user_search/<query>')
-#@token_auth.login_required
+@token_auth.login_required
 def user_search(query):
     query = User.query.search(query).all()
     data = User.to_collection_dict(query, 'api.search')

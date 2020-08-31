@@ -1,6 +1,3 @@
-from flask_sqlalchemy import SQLAlchemy, BaseQuery
-from sqlalchemy_searchable import SearchQueryMixin, make_searchable
-from sqlalchemy_utils.types import TSVectorType
 import base64, os, jwt
 from time import time
 from flask import jsonify, current_app, request, url_for
@@ -65,7 +62,16 @@ class Card(db.Model):
         for field in ['authorization_code', 'card_type', 'last4', 'exp_month', 'exp_year', 'bin', 'bank', 'signature', 'reusable', 'country_code']:
             setattr(self, field, data[field])
 
-class Lplan(PaginatedAPIMixin, db.Model):
+plan_services = db.Table('plan_services',
+    db.Column('plan_id', db.Integer, db.ForeignKey('plan.id')),
+    db.Column('service_id', db.Integer, db.ForeignKey('service.id')))
+
+class Service(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sid = db.Column(db.Unicode())
+    name = db.Column(db.Unicode())
+
+class Plan(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ps_id = db.Column(db.Integer())
     name = db.Column(db.Unicode())
@@ -78,25 +84,21 @@ class Lplan(PaginatedAPIMixin, db.Model):
             'ps_id': self.ps_id,
             'name': self.name,
             'amount': self.amount,
-            'period': self.period
+            'period': self.period,
+            'l_year': self.year
         }
         return data
 
-user_lplans = db.Table('user_lplans',
+user_plans = db.Table('user_plans',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('lplan_id', db.Integer, db.ForeignKey('lplan.id')))
-
-class UserQuery(BaseQuery, SearchQueryMixin):
-    pass
+    db.Column('plan_id', db.Integer, db.ForeignKey('plan.id')))
 
 class User(PaginatedAPIMixin, UserMixin, db.Model):
-        query_class = UserQuery
-        search_vector = db.Column(TSVectorType('description', 'name'))
         id = db.Column(db.Integer, primary_key=True)
         ps_id = db.Column(db.Integer)
         ps_code = db.Column(db.String())
         ps_email = db.Column(db.Unicode())
-        lplans = db.relationship('Lplan', secondary=user_lplans, backref=db.backref('users', lazy=True), lazy=True)
+        plans = db.relationship('Plan', secondary=user_plans, backref=db.backref('users', lazy=True), lazy=True)
         lesson_progress = db.Column(db.Unicode())
         cards = db.relationship(Card, backref='user', lazy='dynamic')
         logo_url = db.Column(db.String())
@@ -192,27 +194,6 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         def subscribed(self, plan):
             return self.plans.filter(
                 user_plans.c.plan_id == plan.id).count() > 0
-
-class MPlan(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    ps_id = db.Column(db.Integer)
-    name = db.Column(db.Unicode())
-    amount = db.Column(db.Unicode())
-    period = db.Column(db.Unicode())
-
-    def to_dict(self):
-        data = {
-            'id': self.id,
-            'ps_id': self.ps_id,
-            'name': self.name,
-            'amount': self.amount,
-            'period': self.period
-        }
-
-    def from_dict(self, data):
-            for field in ['name', 'amount', 'period']:
-                if field in data:
-                    setattr(self, field, data[field])
 
 lesson_subject = db.Table('lesson_subject',
     db.Column('lesson_id', db.Integer, db.ForeignKey('lesson.id'), primary_key=True),
