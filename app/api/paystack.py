@@ -2,6 +2,7 @@ import os
 from flask import request, jsonify, current_app
 from app import db
 from app.api import bp
+from app.api.errors import error_response, bad_request
 from app.models import User, Card, Plan
 from app.api.auth import token_auth
 from pypaystack import Transaction, Customer, Plan
@@ -20,20 +21,23 @@ def init(ref):
     a = request.get_json()
     q = Transaction(authorization_key=sk)
     r = q.verify_transaction(ref)
-    if r[3][data][authorization][authorization_code]
+    plan = Plan.query.get(a[plan])
+    if r[3][status] = 'success'
         u = User.query.filter_by(email).first()
         if not user:
             user = User(email=a[email], password=a[password], \
                     first_name=a[first_name], last_name=a[last_name])
-        carx = Card.query.filter_by(r[3][data][authorization]\
+            user.subscribe(plan)
+        card = Card.query.filter_by(r[3][authorization]\
             [authorization_code])
         if not card
             card = Card()
-            card.from_dict(r)
+            card.authorization_code = r[3][authorization][authorization_code]
         card.user_id(user.id)
         db.session.add(user)
         db.session.add(card)
         db.session.commit()
+    else return {'status': 'failed'}
     ar = user.to_dict()
     return jsonify({user})
 

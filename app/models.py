@@ -31,32 +31,6 @@ class Card(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer(), db.ForeignKey('user.id'))
     authorization_code = db.Column(db.Unicode())
-    card_type = db.Column(db.Unicode())
-    last4 = db.Column(db.Unicode())
-    exp_month = db.Column(db.Unicode())
-    exp_year = db.Column(db.Unicode())
-    bin = db.Column(db.Unicode())
-    bank = db.Column(db.Unicode())
-    signature = db.Column(db.Unicode())
-    reusable = db.Column(db.Boolean())
-    country_code = db.Column(db.Unicode())
-
-    def to_dict(self):
-        data = {
-            'user_id': self.user_id,
-            'authorizatiion_code': self.authorization_code,
-            'card_type': self.card_type,
-            'signature': self.signature,
-            'last4': self.last4,
-            'exp_month': self.exp_month,
-            'exp_year': self.exp_year,
-            'bin': self.bin,
-            'bank': self.bank,
-            'signature': self.signature,
-            'reusable': self.reusable,
-            'country_code': self.country_code,
-        }
-        return data
 
     def from_dict(self, data):
         for field in ['authorization_code', 'card_type', 'last4', 'exp_month', 'exp_year', 'bin', 'bank', 'signature', 'reusable', 'country_code']:
