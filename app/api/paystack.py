@@ -15,6 +15,28 @@ if status:
 else:
     sk = ptk
 
+@bp.route('/paystack/init/<ref>', methods=['GET', 'POST'])
+def init(ref):
+    a = request.get_json()
+    q = Transaction(authorization_key=sk)
+    r = q.verify_transaction(ref)
+    if r[3][data][authorization][authorization_code]
+        u = User.query.filter_by(email).first()
+        if not user:
+            user = User(email=a[email], password=a[password], \
+                    first_name=a[first_name], last_name=a[last_name])
+        carx = Card.query.filter_by(r[3][data][authorization]\
+            [authorization_code])
+        if not card
+            card = Card()
+            card.from_dict(r)
+        card.user_id(user.id)
+        db.session.add(user)
+        db.session.add(card)
+        db.session.commit()
+    ar = user.to_dict()
+    return jsonify({user})
+
 @bp.route('/paystack/create_card/<int:id>', methods=['POST'])
 def create_card(id):
     data = request

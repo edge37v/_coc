@@ -23,6 +23,7 @@ login.login_message = ('You gotta login first')
 
 def create_app():
     app = Flask(__name__)
+    CORS(app)
     app.config.from_object(Config)
 
     app.elasticsearch = Elasticsearch([app.config['ELASTICSEARCH_URL']]) \
