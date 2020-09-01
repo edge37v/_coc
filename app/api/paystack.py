@@ -20,9 +20,10 @@ else:
 def init(ref):
     a = request.get_json()
     q = Transaction(authorization_key=sk)
+    c = Customer(authorization_key=sk)
     r = q.verify_transaction(ref)
     plan = Plan.query.get(a[plan])
-    if r[3][status] = 'success'
+    if r[3][status] = 'success':
         u = User.query.filter_by(email).first()
         if not user:
             user = User(email=a[email], password=a[password], \
@@ -37,7 +38,8 @@ def init(ref):
         db.session.add(user)
         db.session.add(card)
         db.session.commit()
-    else return {'status': 'failed'}
+    else:
+        return {'status': 'failed'}
     ar = user.to_dict()
     return jsonify({user})
 
