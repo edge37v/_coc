@@ -10,7 +10,6 @@ from config import Config
 basedir = os.path.abspath(os.path.dirname(__file__))
 from flask_login import LoginManager
 
-
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
@@ -20,7 +19,7 @@ login.login_message = ('You gotta login first')
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)
+    CORS(app)#, resources=r'/api/*', headers='Content-Type')
     app.config.from_object(Config)
 
     db.init_app(app)
@@ -45,6 +44,18 @@ def create_app():
 
     from .models import User
 
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+    file_handler = RotatingFileHandler('logs/marketlnx.log', maxBytes=1024,
+                                        backupCount=10)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
+    file_handler.setLevel(logging.INFO)
+    app.logger.addHandler(file_handler)
+
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('Marketlnx startup')
+
     if not app.debug and not app.testing:
         if app.config['MAIL_SERVER']:
             auth = None
@@ -60,18 +71,5 @@ def create_app():
                 credentials=auth, secure=secure)
             mail_handler.setLevel(logging.ERROR)
             app.logger.addHandler(mail_handler)
-
-
-        if not os.path.exists('logs'):
-            os.mkdir('logs')
-        file_handler = RotatingFileHandler('logs/marketlnx.log', maxBytes=1024,
-                                            backupCount=10)
-        file_handler.setFormatter(logging.Formatter(
-            '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'))
-        file_handler.setLevel(logging.INFO)
-        app.logger.addHandler(file_handler)
-
-        app.logger.setLevel(logging.INFO)
-        app.logger.info('Marketlnx startup')
 
     return app

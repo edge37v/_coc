@@ -104,6 +104,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         ps_email = db.Column(db.Unicode())
         plans = db.relationship('Plan', secondary=user_plans, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
         services = db.relationship('Service', secondary=user_services, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
+        l_access = db.Column(db.Boolean(), default=False)
         lesson_progress = db.Column(db.Unicode())
         cards = db.relationship(Card, backref='user', lazy='dynamic')
         logo_url = db.Column(db.Unicode)

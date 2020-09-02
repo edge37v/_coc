@@ -18,7 +18,7 @@ def lessons_sb(subject):
 @token_auth.login_required
 def lessons_sb_yr(sb, yr):
     plan = Plan.query.filter_by(l_year=yr).first()
-    if not g.current_user.subscribed(plan):
+    if not g.current_user.l_access:
         return payment_required('The user needs to pay to access this')
     query = Lesson.query.filter(
                 Lesson.subject.any(sid=sb)).filter(
@@ -32,7 +32,7 @@ def lessons_sb_yr(sb, yr):
 @token_auth.login_required
 def lessons_sb_yr_md(sb, yr, md):
     plan = Plan.query.filter_by(l_year=yr).first()
-    if not g.current_user.subscribed(plan):
+    if not g.current_user.l_access:
         return payment_required('The user needs to pay to access this')
     query = Lesson.query.filter(
                 Lesson.subject.any(sid=sb)).filter(
@@ -47,7 +47,7 @@ def lessons_sb_yr_md(sb, yr, md):
 @token_auth.login_required
 def lessons_sb_yr_md_lv(sb, yr, md, lv):
     plan = Plan.query.filter_by(l_year=yr).first()
-    if not g.current_user.subscribed(plan):
+    if not g.current_user.l_access:
         return payment_required('The user needs to pay to access this')
     query = Lesson.query.filter(
                 Lesson.subject.any(sid=sb)).filter(
@@ -67,7 +67,7 @@ def lesson(sb, position):
                 Lesson.subject.any(sid=sb)).filter_by(
                     position=position+shift).first()
     plan = Plan.query.filter_by(l_year=lesson.year).first()
-    if not g.current_user.subscribed(plan):
+    if not g.current_user.l_access:
         return payment_required('The user needs to pay to access this')
     #Lesson.query.filter_byposition=position
     shift = request.args.get('shift', 0, type=float)
