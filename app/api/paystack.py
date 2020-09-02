@@ -19,35 +19,32 @@ def p_test():
 def init():
     a = request.get_json()
     reference = a['reference']
-    q = Transaction()
-    r = q.verify(reference)
-    if r is not None:
-        if r[3]['status'] == 'success':
-            #plan = a['plan']
-            #p = Plan.query.filter_by(name=plan).first()
-            c = r[3]['customer']
-            email = c['email']
-            user = User.query.filter_by(email=email).first()
-            if user:
-                return bad_request('User already registered')
-            else:
-                user = User(email=c['email'], \
-                        first_name=c['first_name'], last_name=c['last_name'])
-                password = a['password']
-                user.set_password(password)
-                user.l_access = True
-                user.customer_code = c['customer_code']
-            card = Card.query.filter_by(authorization_code = r[3]['authorization']['authorization_code'])
-            if not card:
-                card = Card()
-                card.authorization_code = r[3]['authorization']['authorization_code']
-            #card.user_id(user.id)
-            db.session.add(user)
-            #db.session.add(card)
-            db.session.commit()
-            x = user.to_dict()
+    r = Transaction().verify(reference)
+    if r[3]['status'] == 'success':
+        plan = a['plan']
+        p = Plan.query.filter_by(name=plan).first()
+        c = r[3]['customer']
+        email = c['email']
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            return bad_request('User already registered')
         else:
-            return {'status': 'failed'}
+            user = User(email=c['email'], \
+                    first_name=c['first_name'], last_name=c['last_name'])
+            password = a['password']
+            user.set_password(password)
+            if plan:
+                user.subscribe(plan)
+            user.customer_code = c['customer_code']
+        card = Card.query.filter_by(authorization_code = r[3]['authorization']['authorization_code'])
+        if not card:
+            card = Card()
+            card.authorization_code = r[3]['authorization']['authorization_code']
+        card.user = user
+        db.session.add(user)
+        db.session.add(card)
+        db.session.commit()
+        x = user.to_dict()
     else:
         return {'status': 'failed'}
     return jsonify(x)

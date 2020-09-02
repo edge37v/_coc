@@ -79,6 +79,9 @@ class Plan(PaginatedAPIMixin, db.Model):
     period = db.Column(db.Unicode())
     service = db.relationship(Service, secondary=plan_services, backref='plan', lazy='dynamic')
 
+    def __repr__(self):
+        return 'Plan: {}'.format(self.name)
+
     def to_dict(self):
         data = {
             'id': self.id,
@@ -157,7 +160,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             return User.query.get(id)
 
         def __repr__(self):
-            return '<user {}>'.format(self.email)
+            return 'user {}'.format(self.email)
 
         def set_password(self, password):
             self.password_hash = generate_password_hash(password)
@@ -241,7 +244,7 @@ class Lesson(PaginatedAPIMixin, db.Model):
     worksheet_answers_url = db.Column(db.Unicode())
 
     def __repr__(self):
-            return '<Lesson {}>'.format(self.name)
+            return 'Lesson: {}'.format(self.name)
             
     def to_dict(self):
         data = {

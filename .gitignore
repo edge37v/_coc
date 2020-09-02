@@ -37,13 +37,5 @@ nosetests.xml
 
 venv
 app.db
+app.db-journal
 marketlnx.log*
-
-[program:apexlinks]
-command=/home/ubuntu/apexlinks/venv/bin/gunicorn -b localhost:8000 -w 4 apexlinks:app
-directory=/home/ubuntu/apexlinks
-user=ubuntu
-autostart=true
-autorestart=true
-stopasgroup=true
-killasgroup=true
