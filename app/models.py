@@ -27,6 +27,36 @@ class PaginatedAPIMixin(object):
         }
         return data
 
+plan_services = db.Table('plan_services',
+    db.Column('plan_id', db.Integer, db.ForeignKey('plan.id')),
+    db.Column('service_id', db.Integer, db.ForeignKey('service.id')))
+
+class Service(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    sid = db.Column(db.Unicode())
+    name = db.Column(db.Unicode())
+
+class Plan(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    ps_id = db.Column(db.Integer())
+    name = db.Column(db.Unicode())
+    amount = db.Column(db.Integer)
+    period = db.Column(db.Unicode())
+    service = db.relationship(Service, secondary=plan_services, backref='plan', lazy='dynamic')
+
+    def __repr__(self):
+        return 'Plan: {}'.format(self.name)
+
+    def to_dict(self):
+        data = {
+            'id': self.id,
+            'ps_id': self.ps_id,
+            'name': self.name,
+            'amount': self.amount,
+            'period': self.period,
+        }
+        return data
+
 class Card(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     authorization_code = db.Column(db.Unicode())
@@ -61,35 +91,9 @@ class Card(db.Model):
         for field in ['authorization_code', 'card_type', 'last4', 'exp_month', 'exp_year', 'bin', 'bank', 'signature', 'reusable', 'country_code']:
             setattr(self, field, data[field])
 
-plan_services = db.Table('plan_services',
-    db.Column('plan_id', db.Integer, db.ForeignKey('plan.id')),
-    db.Column('service_id', db.Integer, db.ForeignKey('service.id')))
-
-class Service(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sid = db.Column(db.Unicode())
-    name = db.Column(db.Unicode())
-
-class Plan(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    ps_id = db.Column(db.Integer())
-    name = db.Column(db.Unicode())
-    amount = db.Column(db.Integer)
-    period = db.Column(db.Unicode())
-    service = db.relationship(Service, secondary=plan_services, backref='plan', lazy='dynamic')
-
-    def __repr__(self):
-        return 'Plan: {}'.format(self.name)
-
-    def to_dict(self):
-        data = {
-            'id': self.id,
-            'ps_id': self.ps_id,
-            'name': self.name,
-            'amount': self.amount,
-            'period': self.period,
-        }
-        return data
+user_cards = db.Table('user_cards',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('card_id', db.Integer, db.ForeignKey('card.id')))
 
 user_plans = db.Table('user_plans',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
@@ -108,7 +112,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         services = db.relationship('Service', secondary=user_services, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
         l_access = db.Column(db.Boolean(), default=False)
         lesson_progress = db.Column(db.Unicode())
-        cards = db.relationship(Card, backref='user', lazy='dynamic')
+        cards = db.relationship(Card, secondary=user_cards, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
         logo_url = db.Column(db.Unicode)
         customer_code = db.Column(db.Unicode)
         email = db.Column(db.Unicode(123), unique=True)
@@ -192,13 +196,26 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 if 'password' in data:
                     self.set_password(data['password'])
 
+        def add_card(self, card):
+            if not self.has_card(card):
+                self.cards.append(card)
+
+        def remove_card(self, card):
+            if self.has_card(card):
+                self.remove(card)
+
+        def has_card(self, card):
+            return self.cards.filter(
+                user_cards.c.card_id == card.id).count() > 0
+            )
+
         def subscribe(self, plan):
             if not self.subscribed(plan):
                 self.plans.append(plan)
 
-        def unssubscribe(self, plan):
-            if not self.subscribed(plan):
-                self.plans.append(plan)
+        def unsubscribe(self, plan):
+            if self.subscribed(plan):
+                self.plans.remove(plan)
 
         def subscribed(self, plan):
             return self.plans.filter(
