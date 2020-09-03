@@ -21,27 +21,25 @@ def init():
     reference = a['reference']
     r = Transaction().verify(reference)
     if r[3]['status'] == 'success':
-        plan = a['plan']
-        p = Plan.query.filter_by(name=plan).first()
+        p = a['plan']
+        plan = Plan.query.get(p)
         c = r[3]['customer']
         email = c['email']
         user = User.query.filter_by(email=email).first()
         if not user:
-            return bad_request('User already registered')
-        else:
             user = User(email=c['email'], \
                     first_name=c['first_name'], last_name=c['last_name'])
             password = a['password']
             user.set_password(password)
-            if plan:
-                user.subscribe(plan)
-            user.customer_code = c['customer_code']
-        card = Card.query.filter_by(authorization_code = r[3]['authorization']['authorization_code'])
+            db.session.add(user)
+        if plan:
+            user.subscribe(plan)
+        user.customer_code = c['customer_code']
+        card_auth = r[3]['authorization']['authorization_code']
+        card = Card.query.filter_by(authorization_code = card_auth).first()
         if not card:
             card = Card()
-            card.authorization_code = r[3]['authorization']['authorization_code']
-        card.user = user
-        db.session.add(user)
+            card.authorization_code = card_auth
         db.session.add(card)
         db.session.commit()
         x = user.to_dict()

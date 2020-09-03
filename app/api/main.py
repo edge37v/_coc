@@ -7,7 +7,8 @@ from app.api.errors import bad_request
 
 @bp.route('/test', methods=['GET'])
 def test():
-    return jsonify({'status': 'yep'})
+    a = os.environ.get('TS')
+    return jsonify({'status': a})
 
 @bp.route('/user_search/<query>')
 @token_auth.login_required

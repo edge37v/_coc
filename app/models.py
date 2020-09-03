@@ -29,7 +29,6 @@ class PaginatedAPIMixin(object):
 
 class Card(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer(), db.ForeignKey('user.id'))
     authorization_code = db.Column(db.Unicode())
     card_type = db.Column(db.Unicode())
     last4 = db.Column(db.Unicode())
