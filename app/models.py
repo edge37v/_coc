@@ -183,7 +183,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 '_links': {
                     'self': url_for('api.get_user', id = self.id)
                 },
-                'plans': 'TODO'
+                'plans': dict(self.plans)
             }
             if include_email:
                 data['email'] = self.email
@@ -207,7 +207,6 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         def has_card(self, card):
             return self.cards.filter(
                 user_cards.c.card_id == card.id).count() > 0
-            )
 
         def subscribe(self, plan):
             if not self.subscribed(plan):
