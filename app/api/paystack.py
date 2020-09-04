@@ -3,6 +3,7 @@ from flask import request, jsonify, current_app
 from flask_cors import cross_origin
 from app import db
 from app.api import bp
+basedir = os.path.abspath(os.path.dirname(__file__))
 from app.api.errors import error_response, bad_request
 from app.models import User, Card, Plan
 from app.api.auth import token_auth
@@ -15,8 +16,29 @@ def p_test():
     iSay = a['iSay']
     return jsonify({'you_said': iSay})
 
+@bp.route('paystack/listen', methods=['POST'])
+def listen():
+    pass
+
 @bp.route('paystack/init', methods=['POST'])
 def init():
+    a = request.get_json()
+    email = a['email'] 
+    t=Transaction()
+    p = a['plan']
+    plan = Plan.query.get(p)
+    amount = plan.amount
+    user=User.query.filter_by(email=email).first()
+    if user:
+        return bad_request('User already registered')
+    r = t.initialize(email=email, amount=amount)
+    if not r:
+        return bad_request("something's wrong")
+    auth_url = r[3]['authorization_url']
+    return jsonify({'url': auth_url})
+
+@bp.route('paystack/card', methods=['POST'])
+def card():
     a = request.get_json()
     reference = a['reference']
     r = Transaction().verify(reference)

@@ -45,7 +45,7 @@ class Plan(PaginatedAPIMixin, db.Model):
     service = db.relationship(Service, secondary=plan_services, backref='plan', lazy='dynamic')
 
     def __repr__(self):
-        return 'Plan: {}'.format(self.name)
+        return 'name: {}'.format(self.name)
 
     def to_dict(self):
         data = {
@@ -163,7 +163,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             return User.query.get(id)
 
         def __repr__(self):
-            return 'user {}'.format(self.email)
+            return 'email: {}'.format(self.email)
 
         def set_password(self, password):
             self.password_hash = generate_password_hash(password)
@@ -183,7 +183,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 '_links': {
                     'self': url_for('api.get_user', id = self.id)
                 },
-                'plans': dict(self.plans)
+                'plans': list(self.plans)
             }
             if include_email:
                 data['email'] = self.email
@@ -259,7 +259,7 @@ class Lesson(PaginatedAPIMixin, db.Model):
     worksheet_answers_url = db.Column(db.Unicode())
 
     def __repr__(self):
-            return 'Lesson: {}'.format(self.name)
+            return 'name: {}'.format(self.name)
             
     def to_dict(self):
         data = {
@@ -303,7 +303,7 @@ class Subject(PaginatedAPIMixin, db.Model):
         return data
 
     def __repr__(self):
-            return '<Subject {}>'.format(self.name)
+            return 'name {}'.format(self.name)
 
 class Year(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -320,7 +320,7 @@ class Year(PaginatedAPIMixin, db.Model):
         return data
 
     def __repr__(self):
-            return '<Grade {}>'.format(self.name)
+            return 'name {}'.format(self.name)
 
 class Module(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -337,7 +337,7 @@ class Module(PaginatedAPIMixin, db.Model):
         return data
 
     def __repr__(self):
-            return '<Module {}>'.format(self.name)
+            return 'name {}'.format(self.name)
 
 class Level(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -354,4 +354,4 @@ class Level(PaginatedAPIMixin, db.Model):
         return data
 
     def __repr__(self):
-            return '<Level {}>'.format(self.name)
+            return 'name: {}'.format(self.name)
