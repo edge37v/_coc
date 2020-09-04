@@ -2,6 +2,7 @@ import base64, os, jwt
 from time import time
 from flask import jsonify, current_app, request, url_for
 from app import db, login
+from pypaystack import Plan
 from flask_login import UserMixin
 from datetime import datetime, timedelta
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -10,25 +11,25 @@ class PaginatedAPIMixin(object):
     @staticmethod
     def to_collection_dict(query, page, per_page, endpoint, **kwargs):
         resources = query.paginate(page, per_page, False)
-        data = {
-            'items': [item.to_dict() for item in resources.items],
-            'meta': {
+        data = {'items': [item.to_dict() for item in resources.items]}
+        if page:
+            data.meta = {
                 'page': page,
                 'total_pages': resources.pages,
                 'total_items': resources.total
-            },
-            '_links': {
+            }
+        if endpoint:
+            data._links = {
                 'self': url_for(endpoint, page=page, per_page=per_page, **kwargs),
                 'next': url_for(endpoint, page=page + 1, per_page=per_page, 
                                 **kwargs) if resources.has_next else None,
                 'prev': url_for(endpoint, page=page - 1, per_page=per_page,
                                 **kwargs) if resources.has_prev else None
             }
-        }
         return data
 
-plan_services = db.Table('plan_services',
-    db.Column('plan_id', db.Integer, db.ForeignKey('plan.id')),
+l_plan_services = db.Table('l_plan_services',
+    db.Column('l_plan_id', db.Integer, db.ForeignKey('l_plan.id')),
     db.Column('service_id', db.Integer, db.ForeignKey('service.id')))
 
 class Service(db.Model):
@@ -36,13 +37,22 @@ class Service(db.Model):
     sid = db.Column(db.Unicode())
     name = db.Column(db.Unicode())
 
-class Plan(PaginatedAPIMixin, db.Model):
+class LPlan(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     ps_id = db.Column(db.Integer())
     name = db.Column(db.Unicode())
     amount = db.Column(db.Integer)
-    period = db.Column(db.Unicode())
-    service = db.relationship(Service, secondary=plan_services, backref='plan', lazy='dynamic')
+    interval = db.Column(db.Unicode())
+    service = db.relationship(Service, secondary=l_plan_services, backref='l_plan', lazy='dynamic')
+
+    def __init__(self, name, amount, interval):
+        p = Plan()
+        p.create(name=name, amount=amount, interval=interval)
+        self.name = name
+        self.amount = amount
+        self.interval = interval
+        db.session.add(self)
+        db.session.commit()
 
     def __repr__(self):
         return 'name: {}'.format(self.name)
@@ -95,9 +105,9 @@ user_cards = db.Table('user_cards',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('card_id', db.Integer, db.ForeignKey('card.id')))
 
-user_plans = db.Table('user_plans',
+user_l_plans = db.Table('user_l_plans',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('plan_id', db.Integer, db.ForeignKey('plan.id')))
+    db.Column('l_plan_id', db.Integer, db.ForeignKey('l_plan.id')))
 
 user_services = db.Table('user_services',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
@@ -108,7 +118,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         ps_id = db.Column(db.Integer)
         ps_code = db.Column(db.String())
         ps_email = db.Column(db.Unicode())
-        plans = db.relationship('Plan', secondary=user_plans, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
+        l_plans = db.relationship('LPlan', secondary=user_l_plans, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
         services = db.relationship('Service', secondary=user_services, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
         l_access = db.Column(db.Boolean(), default=False)
         lesson_progress = db.Column(db.Unicode())
@@ -183,7 +193,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 '_links': {
                     'self': url_for('api.get_user', id = self.id)
                 },
-                'plans': list(self.plans)
+                'l_plans': list(self.l_plans)
             }
             if include_email:
                 data['email'] = self.email
@@ -208,17 +218,17 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             return self.cards.filter(
                 user_cards.c.card_id == card.id).count() > 0
 
-        def subscribe(self, plan):
-            if not self.subscribed(plan):
-                self.plans.append(plan)
+        def subscribe(self, l_plan):
+            if not self.subscribed(l_plan):
+                self.l_plans.append(l_plan)
 
-        def unsubscribe(self, plan):
-            if self.subscribed(plan):
-                self.plans.remove(plan)
+        def unsubscribe(self, l_plan):
+            if self.subscribed(l_plan):
+                self.l_plans.remove(l_plan)
 
-        def subscribed(self, plan):
-            return self.plans.filter(
-                user_plans.c.plan_id == plan.id).count() > 0
+        def subscribed(self, l_plan):
+            return self.l_plans.filter(
+                user_l_plans.c.l_plan_id == l_plan.id).count() > 0
 
         def gets_service(self, service):
             return self.service.filter(

@@ -5,7 +5,7 @@ from app import db
 from app.api import bp
 basedir = os.path.abspath(os.path.dirname(__file__))
 from app.api.errors import error_response, bad_request
-from app.models import User, Card, Plan
+from app.models import User, Card, LPlan
 from app.api.auth import token_auth
 from pypaystack import Transaction, Customer
 import json
@@ -18,22 +18,33 @@ def p_test():
 
 @bp.route('paystack/listen', methods=['POST'])
 def listen():
-    pass
+    a = request.get_json()
+    if a['event'] == 'subscription_create':
+
+        c = a['customer']
+        q = a['authorization']
+        p = a[l_plan]
+        user = User(email=c['email'])
+        db.session.add(user)
+        l_plan = LPlan.query.filter_by(name=p['name']).first()
+        user.subscribe(l_plan)
+        db.session.commit()
 
 @bp.route('paystack/init', methods=['POST'])
 def init():
     a = request.get_json()
     email = a['email'] 
     t=Transaction()
-    p = a['plan']
-    plan = Plan.query.get(p)
-    amount = plan.amount
+    p = a['l_plan']
+    l_plan = LPlan.query.get(p)
+    amount = l_plan.amount
     user=User.query.filter_by(email=email).first()
     if user:
         return bad_request('User already registered')
     r = t.initialize(email=email, amount=amount)
     if not r:
         return bad_request("something's wrong")
+    
     auth_url = r[3]['authorization_url']
     return jsonify({'url': auth_url})
 
@@ -43,8 +54,8 @@ def card():
     reference = a['reference']
     r = Transaction().verify(reference)
     if r[3]['status'] == 'success':
-        p = a['plan']
-        plan = Plan.query.get(p)
+        p = a['l_plan']
+        l_plan = LPlan.query.get(p)
         c = r[3]['customer']
         email = c['email']
         user = User.query.filter_by(email=email).first()
@@ -54,8 +65,8 @@ def card():
             password = a['password']
             user.set_password(password)
             db.session.add(user)
-        if plan:
-            user.subscribe(plan)
+        if l_plan:
+            user.subscribe(l_plan)
         user.customer_code = c['customer_code']
         card_auth = r[3]['authorization']['authorization_code']
         card = Card.query.filter_by(authorization_code = card_auth).first()
@@ -85,14 +96,14 @@ def verify_transaction(ref):
 @bp.route('/paystack/charge_user', methods=['POST'])
 def charge_user():
     data = request.get_json()
-    plan = data['plan']
+    l_plan = data['l_plan']
     user = data['user']
-    plan = Plan.query.get(plan)
+    l_plan = LPlan.query.get(l_plan)
     user = User.query.get(user)
     transaction = Transaction()
-    response = transaction.charge(user.email, user.customer_code, plan.amount)
+    response = transaction.charge(user.email, user.customer_code, l_plan.amount)
     if response[3]['status'] == 'failed':
         return {'status': 'failed'}
-    user.plans.append(plan)
+    user.l_plans.append(l_plan)
     return {'status': 'success'}
 

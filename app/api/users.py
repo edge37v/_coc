@@ -30,7 +30,7 @@ def create_user():
     user.from_dict(data, new_user=True)
     db.session.add(user)
     db.session.commit()
-    send_user_email(user)
+    #send_user_email(user)
     response = jsonify(user.to_dict())
     response.status_code = 201
     response.headers['Location'] = url_for('api.get_user', id=user.id)

@@ -7,11 +7,13 @@ from app.api.auth import basic_auth, token_auth
 @bp.route('/tokens', methods=['POST'])
 @basic_auth.login_required
 def get_token():
-    if not g.current_user.confirmed:
-        return error_response(401, 'User not confirmed')
+    #if not g.current_user.confirmed:
+    #    return error_response(401, 'User not confirmed')
     token = g.current_user.get_token()
     db.session.commit()
-    return jsonify({'token': token})
+    response = {'user': g.current_user.to_dict()}
+    response.token = token
+    return jsonify(response)
 
 @bp.route('/tokens', methods=['DELETE'])
 @token_auth.login_required
