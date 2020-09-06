@@ -15,14 +15,6 @@ def verify_password(email, password):
     g.current_user = user
     return user.check_password(password)
 
-def confirm_user(token):
-    user = User.check_utoken(token)
-    if not user:
-        return redirect('https://marketlnx.com/invalid_clink')
-    user.confirmed=True
-    db.session.commit()
-    return redirect('https://marketlnx.com/account_confirmed')
-
 @basic_auth.error_handler
 def basic_auth_error():
     return error_response(401)

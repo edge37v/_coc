@@ -1,25 +1,26 @@
 import base64, os, jwt
 from time import time
-from flask import jsonify, current_app, request, url_for
 from app import db, login
 from pypaystack import Plan
 from flask_login import UserMixin
 from datetime import datetime, timedelta
+basedir = os.path.abspath(os.path.dirname(__file__))
+from flask import jsonify, current_app, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
 class PaginatedAPIMixin(object):
     @staticmethod
-    def to_collection_dict(query, page, per_page, endpoint, **kwargs):
+    def to_collection_dict(query, page=1, per_page=10, endpoint='', **kwargs):
         resources = query.paginate(page, per_page, False)
         data = {'items': [item.to_dict() for item in resources.items]}
         if page:
-            data.meta = {
+            data['meta'] = {
                 'page': page,
                 'total_pages': resources.pages,
                 'total_items': resources.total
             }
         if endpoint:
-            data._links = {
+            data['_links'] = {
                 'self': url_for(endpoint, page=page, per_page=per_page, **kwargs),
                 'next': url_for(endpoint, page=page + 1, per_page=per_page, 
                                 **kwargs) if resources.has_next else None,
@@ -42,6 +43,7 @@ class LPlan(PaginatedAPIMixin, db.Model):
     ps_id = db.Column(db.Integer())
     name = db.Column(db.Unicode())
     amount = db.Column(db.Integer)
+    year = db.Column(db.Unicode)
     interval = db.Column(db.Unicode())
     service = db.relationship(Service, secondary=l_plan_services, backref='l_plan', lazy='dynamic')
 
@@ -55,15 +57,16 @@ class LPlan(PaginatedAPIMixin, db.Model):
         db.session.commit()
 
     def __repr__(self):
-        return 'name: {}'.format(self.name)
+        return 'Plan {}: {}'.format(self.id, self.name)
 
     def to_dict(self):
         data = {
             'id': self.id,
             'ps_id': self.ps_id,
             'name': self.name,
+            'year': self.year,
             'amount': self.amount,
-            'period': self.period,
+            'interval': self.interval,
         }
         return data
 
@@ -182,6 +185,10 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             return check_password_hash(self.password_hash, password)
 
         def to_dict(self, include_email=False):
+            l = list(self.l_plans)
+            def get_l(l):
+                for i in range(len(l)):
+                    return {'plan': str(l[i])}
             data = {
                 'id': self.id,
                 'confirmed': self.confirmed,
@@ -190,13 +197,14 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 'last_name': self.last_name,
                 'phone': self.phone,
                 'about': self.about,
-                '_links': {
-                    'self': url_for('api.get_user', id = self.id)
-                },
-                'l_plans': list(self.l_plans)
+                'password': 'love',
+                #'_links': {
+                #    'self': url_for('api.get_user', id = self.id)
+                #},
+                'l_plans': get_l(l)
             }
-            if include_email:
-                data['email'] = self.email
+            #if include_email:
+            #    data['email'] = self.email
             return data
 
         def from_dict(self, data, new_user=False):
@@ -268,6 +276,24 @@ class Lesson(PaginatedAPIMixin, db.Model):
     video_url = db.Column(db.Unicode())
     worksheet_answers_url = db.Column(db.Unicode())
 
+    def __init__(self, name, s, y, m, l):
+        self.name = name
+        #self.subject.append(subject)
+        #self.year.append(year)
+        #self.module.append(module)
+        #self.level.append(level)
+        s = Subject.query.join(lesson_subject, (lesson_subject.c.lesson_id == self.id)).first()
+        y = Year.query.join(lesson_year, (lesson_year.c.lesson_id == self.id)).first()
+        m = Module.query.join(lesson_module, (lesson_module.c.lesson_id == self.id)).first()
+        l = Level.query.join(lesson_level, (lesson_level.c.lesson_id == self.id)).first()
+        location = 'lessons' + '/' + str(s) + '/' + str(y) + '/' + str(m) + '/' + str(l) + '/' + str(self.name) + '.svg'
+        #self.url = url_for('static', filename=location)
+        base_path = os.path.join(basedir, 'app/static/' + location)
+        l = open(base_path, 'w+')
+        l.close()
+        db.session.add(self)
+        db.session.commit()
+
     def __repr__(self):
             return 'name: {}'.format(self.name)
             
@@ -290,13 +316,6 @@ class Lesson(PaginatedAPIMixin, db.Model):
             }
         }
         return data
-
-    def createl_url(self):
-        s = Subject.query.join(lesson_subject, (lesson_subject.c.lesson_id == self.id)).first()
-        y = Year.query.join(lesson_year, (lesson_year.c.lesson_id == self.id)).first()
-        m = Module.query.join(lesson_module, (lesson_module.c.lesson_id == self.id)).first()
-        l = Level.query.join(lesson_level, (lesson_level.c.lesson_id == self.id)).first()
-        self.url = 'lessons' + '/' + str(s.sid) + '/' + str(y.sid) + '/' + str(m.sid) + '/' + str(l.sid) + '/' + str(self.name) + '.svg'
 
 class Subject(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
