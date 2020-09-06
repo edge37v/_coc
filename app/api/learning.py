@@ -26,8 +26,8 @@ def subjects():
     return jsonify(q)
 
 @bp.route('/apexlnx/lessons', methods=['POST'])
-@token_auth.login_required
-def lessons_sb(subject):
+#@token_auth.login_required
+def lessons():
     q = request.get_json()
     query = Lesson.query.filter(Lesson.year.any(sid=q['year'])).filter(
         Lesson.subject.any(sid=q['subject']))
@@ -43,7 +43,7 @@ def lessons_sb(subject):
 @bp.route('/apexlnx/lessons/<yr>/<sb>', methods=['GET'])
 @token_auth.login_required
 def lessons__yr(yr, sb):
-    plan = LPlan.query.filter_by(year=yr).all()
+    pass
 
 @bp.route('/apexlnx/lessons/<sb>/<yr>', methods=['GET'])
 @token_auth.login_required

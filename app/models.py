@@ -355,6 +355,7 @@ class Module(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sid = db.Column(db.String(3), unique=True)
     name = db.Column(db.String(123), unique=True)
+    position = db.Column(db.Integer)
 
     def to_dict(self):
         data = {
@@ -372,6 +373,7 @@ class Level(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sid = db.Column(db.String(3), unique=True)
     name = db.Column(db.String(123), unique=True)
+    position = db.Column(db.Integer)
 
     def to_dict(self):
         data = {

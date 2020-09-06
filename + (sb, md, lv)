@@ -1,0 +1,12 @@
+db.session.add(Subject(name='Science', sid='sci'))
+db.session.add(Subject(name='Math', sid='math'))
+db.session.add(Subject(name='English', sid='eng'))
+
+db.session.add(Module(name='Transition', sid='trn', position=1))
+db.session.add(Module(name='Winter', sid='win'))
+db.session.add(Module(name='Spring', sid='spg'))
+db.session.add(Module(name='Summer', sid='sum'))
+
+db.session.add(Level(name='Beginner', sid='bgn'))
+db.session.add(Level(name='Progress', sid='prg'))
+db.session.add(Level(name='Ultimate', sid='ult'))
