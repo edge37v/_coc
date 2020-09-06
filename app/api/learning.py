@@ -5,12 +5,27 @@ from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request, payment_required
 
+@bp.route('/apexlnx/levels', methods=['GET'])
+def levels():
+    q = Level.to_collection_dict(Level.query)
+    return jsonify(q)
+
+@bp.route('/apexlnx/modules', methods=['GET'])
+def modules():
+    q = Module.to_collection_dict(Module.query)
+    return jsonify(q)
+
+@bp.route('/apexlnx/years', methods=['GET'])
+def years():
+    q = Year.to_collection_dict(Year.query)
+    return jsonify(q)
+
 @bp.route('/apexlnx/subjects', methods=['GET'])
 def subjects():
     q = Subject.to_collection_dict(Subject.query)
     return jsonify(q)
 
-@bp.route('/apexlnx/lessons', methods=['GET'])
+@bp.route('/apexlnx/lessons', methods=['POST'])
 @token_auth.login_required
 def lessons_sb(subject):
     q = request.get_json()
