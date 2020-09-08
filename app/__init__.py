@@ -1,4 +1,6 @@
 import os, logging
+from flask import request
+from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from logging.handlers import SMTPHandler, RotatingFileHandler
 from flask_sqlalchemy import SQLAlchemy
@@ -10,6 +12,7 @@ from config import Config
 basedir = os.path.abspath(os.path.dirname(__file__))
 from flask_login import LoginManager
 
+jwt = JWTManager()
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
@@ -19,10 +22,11 @@ login.login_message = ('You gotta login first')
 
 def create_app():
     app = Flask(__name__)
-    CORS(app)#, resources=r'/api/*', headers='Content-Type')
+    CORS(app)
     app.config.from_object(Config)
 
     db.init_app(app)
+    jwt.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
     login.init_app(app)

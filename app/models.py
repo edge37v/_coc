@@ -336,6 +336,7 @@ class Subject(PaginatedAPIMixin, db.Model):
 
 class Year(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    year = db.Column(db.Integer)
     sid = db.Column(db.String(3), unique=True)
     name = db.Column(db.String(123), unique=True)
 

@@ -54,8 +54,9 @@ def card():
     reference = a['reference']
     r = Transaction().verify(reference)
     if r[3]['status'] == 'success':
-        p = a['plan']
-        plan = LPlan.query.get(p)
+        if a['plan']:
+            p = a['plan']
+            plan = LPlan.query.filter_by(p).first()
         c = r[3]['customer']
         email = c['email']
         user = User.query.filter_by(email=email).first()
@@ -64,6 +65,7 @@ def card():
                     first_name=c['first_name'], last_name=c['last_name'])
             password = a['password']
             user.set_password(password)
+            user.confirmed = True
             db.session.add(user)
         if plan:
             user.subscribe(plan)

@@ -1,4 +1,5 @@
 import os
+from flask_jwt_extended import jwt_required
 from flask import g, abort, jsonify, request, url_for
 from app import db
 from app.models import User
@@ -12,7 +13,7 @@ def test():
     return jsonify({'status': a})
 
 @bp.route('/user_search/<query>')
-@token_auth.login_required
+@jwt_required
 def user_search(query):
     query = User.query.search(query).all()
     data = User.to_collection_dict(query, 'api.search')

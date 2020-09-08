@@ -9,6 +9,9 @@ def error_response(status_code, message=None):
     response.status_code = status_code
     return response
 
+def wrong_password(message):
+    return error_response(401, message)
+
 def bad_request(message):
     return error_response(400, message)
 

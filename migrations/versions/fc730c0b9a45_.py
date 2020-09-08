@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: 7bab826cf489
+Revision ID: fc730c0b9a45
 Revises: 
-Create Date: 2020-09-03 17:43:17.158719
+Create Date: 2020-09-07 11:55:19.236867
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '7bab826cf489'
+revision = 'fc730c0b9a45'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -32,6 +32,15 @@ def upgrade():
     sa.Column('country_code', sa.Unicode(), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('l_plan',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('ps_id', sa.Integer(), nullable=True),
+    sa.Column('name', sa.Unicode(), nullable=True),
+    sa.Column('amount', sa.Integer(), nullable=True),
+    sa.Column('year', sa.Unicode(), nullable=True),
+    sa.Column('interval', sa.Unicode(), nullable=True),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('lesson',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('name', sa.Unicode(), nullable=True),
@@ -48,6 +57,7 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('sid', sa.String(length=3), nullable=True),
     sa.Column('name', sa.String(length=123), nullable=True),
+    sa.Column('position', sa.Integer(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name'),
     sa.UniqueConstraint('sid')
@@ -56,17 +66,10 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('sid', sa.String(length=3), nullable=True),
     sa.Column('name', sa.String(length=123), nullable=True),
+    sa.Column('position', sa.Integer(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name'),
     sa.UniqueConstraint('sid')
-    )
-    op.create_table('l_plan',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('ps_id', sa.Integer(), nullable=True),
-    sa.Column('name', sa.Unicode(), nullable=True),
-    sa.Column('amount', sa.Integer(), nullable=True),
-    sa.Column('period', sa.Unicode(), nullable=True),
-    sa.PrimaryKeyConstraint('id')
     )
     op.create_table('service',
     sa.Column('id', sa.Integer(), nullable=False),
@@ -117,6 +120,12 @@ def upgrade():
     sa.UniqueConstraint('name'),
     sa.UniqueConstraint('sid')
     )
+    op.create_table('l_plan_services',
+    sa.Column('l_plan_id', sa.Integer(), nullable=True),
+    sa.Column('service_id', sa.Integer(), nullable=True),
+    sa.ForeignKeyConstraint(['l_plan_id'], ['l_plan.id'], ),
+    sa.ForeignKeyConstraint(['service_id'], ['service.id'], )
+    )
     op.create_table('lesson_level',
     sa.Column('lesson_id', sa.Integer(), nullable=False),
     sa.Column('level_id', sa.Integer(), nullable=False),
@@ -145,12 +154,6 @@ def upgrade():
     sa.ForeignKeyConstraint(['year_id'], ['year.id'], ),
     sa.PrimaryKeyConstraint('lesson_id', 'year_id')
     )
-    op.create_table('l_plan_services',
-    sa.Column('l_plan_id', sa.Integer(), nullable=True),
-    sa.Column('service_id', sa.Integer(), nullable=True),
-    sa.ForeignKeyConstraint(['l_plan_id'], ['l_plan.id'], ),
-    sa.ForeignKeyConstraint(['service_id'], ['service.id'], )
-    )
     op.create_table('user_cards',
     sa.Column('user_id', sa.Integer(), nullable=True),
     sa.Column('card_id', sa.Integer(), nullable=True),
@@ -177,19 +180,19 @@ def downgrade():
     op.drop_table('user_services')
     op.drop_table('user_l_plans')
     op.drop_table('user_cards')
-    op.drop_table('l_plan_services')
     op.drop_table('lesson_year')
     op.drop_table('lesson_subject')
     op.drop_table('lesson_module')
     op.drop_table('lesson_level')
+    op.drop_table('l_plan_services')
     op.drop_table('year')
     op.drop_index(op.f('ix_user_token'), table_name='user')
     op.drop_table('user')
     op.drop_table('subject')
     op.drop_table('service')
-    op.drop_table('l_plan')
     op.drop_table('module')
     op.drop_table('level')
     op.drop_table('lesson')
+    op.drop_table('l_plan')
     op.drop_table('card')
     # ### end Alembic commands ###

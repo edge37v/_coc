@@ -1,3 +1,4 @@
+from flask_jwt_extended import jwt_required
 from flask import g, abort, jsonify, request, url_for
 from app import db
 from app.models import Subject, Year, Module, Level, User, Lesson, LPlan, user_l_plans
@@ -26,7 +27,7 @@ def subjects():
     return jsonify(q)
 
 @bp.route('/apexlnx/lessons', methods=['POST'])
-#@token_auth.login_required
+@jwt_required
 def lessons():
     q = request.get_json()
     query = Lesson.query.filter(Lesson.year.any(sid=q['year'])).filter(
@@ -37,16 +38,16 @@ def lessons():
         query = query.filter(Lesson.level.any(sid=q['level']))
     per_page = min(request.args.get('per_page', 10, type=int), 100)
     page = request.args.get('page', 1, type=int)
-    data = Lesson.to_collection_dict(query, page, per_page, 'api.lessons_sb')
+    data = Lesson.to_collection_dict(query, page, per_page, 'api.lessons')
     return jsonify(data)
 
 @bp.route('/apexlnx/lessons/<yr>/<sb>', methods=['GET'])
-@token_auth.login_required
+@jwt_required
 def lessons__yr(yr, sb):
     pass
 
 @bp.route('/apexlnx/lessons/<sb>/<yr>', methods=['GET'])
-@token_auth.login_required
+@jwt_required
 def lessons_yr(sb, yr):
     plan = LPlan.query.filter_by(year=yr).first()
     if not g.current_user.subscribed(plan):
@@ -60,7 +61,7 @@ def lessons_yr(sb, yr):
     return jsonify(data)
 
 @bp.route('/apexlnx/lessons/<sb>/<yr>/<md>', methods=['GET'])
-@token_auth.login_required
+@jwt_required
 def lessons_md(sb, yr, md):
     plan = LPlan.query.filter_by(year=yr).first()
     if not g.current_user.subscribed(plan):
@@ -75,7 +76,7 @@ def lessons_md(sb, yr, md):
     return jsonify(data)
 
 @bp.route('/apexlnx/lessons/<sb>/<yr>/<md>/<lv>', methods=['GET'])
-@token_auth.login_required
+@jwt_required
 def lessons_lv(sb, yr, md, lv):
     plan = LPlan.query.filter_by(year=yr).first()
     if not g.current_user.subscribed(plan):
@@ -91,7 +92,7 @@ def lessons_lv(sb, yr, md, lv):
     return jsonify(data)
 
 @bp.route('/apexlnx/lessons/<int:id>', methods=['GET'])
-@token_auth.login_required
+@jwt_required
 def lesson(sb, position):
     shift = request.args.get('shift', 0, type=float)
     lesson = Lesson.query.filter(

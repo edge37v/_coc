@@ -1,21 +1,34 @@
-from flask import jsonify, g
+from flask_jwt_extended import jwt_required, create_access_token
+from flask_cors import cross_origin
+from werkzeug.datastructures import Headers
+from flask import make_response, request, jsonify, g
 from app import db
+from app.models import user_l_plans, User, LPlan
 from app.api import bp
-from app.api.errors import error_response
-from app.api.auth import basic_auth, token_auth
+from app.api.errors import wrong_password, bad_request, payment_required, error_response
 
 @bp.route('/tokens', methods=['POST'])
-@basic_auth.login_required
+#@cross_origin(automatic_options=True, supports_credentials=True, allow_headers=['Content-Type', 'Authorization'], vary_header=True, methods=['POST'])
 def get_token():
-    token = g.current_user.get_token()
-    db.session.commit()
-    response = {'user': g.current_user.to_dict()}
-    response['user']['token'] = token
-    return jsonify(response)
+    q = request.get_json()
+    d = Headers()
+    d.add_header('Access-Control-Allow-Origin', request.headers.get('Origin'))
+    user = User.query.filter_by(email=q['email']).first()
+    if not user:
+        return bad_request('User does not exist')
+    if not user.check_password(q['password']):
+        return wrong_password('Wrong Password')
+    if not user.confirmed:
+        return payment_required('User is not subscribed')
+    token = create_access_token(identity=q['email'])
+    u = user.to_dict()
+    u['token'] = token
+    r = jsonify(u)
+    res = make_response(u, d)
+    return res
 
 @bp.route('/tokens', methods=['DELETE'])
-@token_auth.login_required
 def revoke_token():
-    g.current_user.revoke_token()
+    user.revoke_token()
     db.session.commit()
     return '', 204
