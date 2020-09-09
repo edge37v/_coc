@@ -276,21 +276,21 @@ class Lesson(PaginatedAPIMixin, db.Model):
     video_url = db.Column(db.Unicode())
     worksheet_answers_url = db.Column(db.Unicode())
 
-    def __init__(self, name, s, y, m, l):
+    def __init__(self, name):
         self.name = name
-        #self.subject.append(subject)
+        """#self.subject.append(subject)
         #self.year.append(year)
         #self.module.append(module)
         #self.level.append(level)
-        s = Subject.query.join(lesson_subject, (lesson_subject.c.lesson_id == self.id)).first()
-        y = Year.query.join(lesson_year, (lesson_year.c.lesson_id == self.id)).first()
-        m = Module.query.join(lesson_module, (lesson_module.c.lesson_id == self.id)).first()
-        l = Level.query.join(lesson_level, (lesson_level.c.lesson_id == self.id)).first()
-        location = 'lessons' + '/' + str(s) + '/' + str(y) + '/' + str(m) + '/' + str(l) + '/' + str(self.name) + '.svg'
-        #self.url = url_for('static', filename=location)
-        base_path = os.path.join(basedir, 'app/static/' + location)
-        l = open(base_path, 'w+')
-        l.close()
+        #s = Subject.query.join(lesson_subject, (lesson_subject.c.lesson_id == self.id)).first()
+        #y = Year.query.join(lesson_year, (lesson_year.c.lesson_id == self.id)).first()
+        #m = Module.query.join(lesson_module, (lesson_module.c.lesson_id == self.id)).first()
+        #l = Level.query.join(lesson_level, (lesson_level.c.lesson_id == self.id)).first()
+        #location = 'lessons' + '/' + str(s) + '/' + str(y) + '/' + str(m) + '/' + str(l) + '/' + str(self.name) + '.svg'
+        #self.url = str(url_for('static', filename=location))
+        #base_path = os.path.join(basedir, 'app/static/' + location)
+        #l = open(base_path, 'w+')
+        #l.close()"""
         db.session.add(self)
         db.session.commit()
 

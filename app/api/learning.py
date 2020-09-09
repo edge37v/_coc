@@ -1,3 +1,4 @@
+from flask_cors import cross_origin
 from flask_jwt_extended import jwt_required
 from flask import g, abort, jsonify, request, url_for
 from app import db
@@ -27,22 +28,24 @@ def subjects():
     return jsonify(q)
 
 @bp.route('/apexlnx/lessons', methods=['POST'])
-@jwt_required
+#@jwt_required
 def lessons():
     q = request.get_json()
-    query = Lesson.query.filter(Lesson.year.any(sid=q['year'])).filter(
-        Lesson.subject.any(sid=q['subject']))
+    query = Lesson.query.filter(Lesson.year.any(name=q['year'])).filter(
+        Lesson.subject.any(name=q['subject']))
     if q['module']:
-        query = query.filter(Lesson.module.any(sid=q['module']))
+        query = query.filter(Lesson.module.any(name=q['module']))
     if q['level']:
-        query = query.filter(Lesson.level.any(sid=q['level']))
+        query = query.filter(Lesson.level.any(name=q['level']))
     per_page = min(request.args.get('per_page', 10, type=int), 100)
     page = request.args.get('page', 1, type=int)
     data = Lesson.to_collection_dict(query, page, per_page, 'api.lessons')
-    return jsonify(data)
+    l = jsonify(data)
+    return l
 
 @bp.route('/apexlnx/lessons/<yr>/<sb>', methods=['GET'])
-@jwt_required
+@cross_origin(allow_headers=['Content-Type'])
+#@jwt_required
 def lessons__yr(yr, sb):
     pass
 

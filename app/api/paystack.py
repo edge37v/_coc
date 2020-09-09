@@ -55,8 +55,7 @@ def card():
     r = Transaction().verify(reference)
     if r[3]['status'] == 'success':
         if a['plan']:
-            p = a['plan']
-            plan = LPlan.query.filter_by(p).first()
+            plan = LPlan.query.filter_by(name=a['plan']).first()
         c = r[3]['customer']
         email = c['email']
         user = User.query.filter_by(email=email).first()
