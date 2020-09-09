@@ -301,18 +301,17 @@ class Lesson(PaginatedAPIMixin, db.Model):
         data = {
             'id': self.id,
             'url': self.url,
-            'subject': self.subject,
-            'year': self.year,
-            'position': self.position,
-            'module': self.module,
-            'level': self.level,
+            'subject': self.subject.first().name,
+            'year': self.year.first().name,
+            'module': self.module.first().name,
+            'level': self.level.first().name,
             'name': self.name,
             'desc': self.desc,
             'worksheet_url': self.worksheet_url,
             'video_url': self.video_url,
             'worksheet_answers_url': self.worksheet_answers_url,
             'links': {
-                'self': url_for('api.lesson', id=self.id)
+                'self': "url_for('api.lesson', id=self.id)"
             }
         }
         return data

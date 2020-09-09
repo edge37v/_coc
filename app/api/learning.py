@@ -31,12 +31,12 @@ def subjects():
 #@jwt_required
 def lessons():
     q = request.get_json()
-    query = Lesson.query.filter(Lesson.year.any(name=q['year'])).filter(
-        Lesson.subject.any(name=q['subject']))
+    query = Lesson.query.filter(Lesson.year.any(name=str(q['year']))).filter(
+        Lesson.subject.any(name=str(q['subject'])))
     if q['module']:
-        query = query.filter(Lesson.module.any(name=q['module']))
+        query = query.filter(Lesson.module.any(name=str(q['module'])))
     if q['level']:
-        query = query.filter(Lesson.level.any(name=q['level']))
+        query = query.filter(Lesson.level.any(name=str(q['level'])))
     per_page = min(request.args.get('per_page', 10, type=int), 100)
     page = request.args.get('page', 1, type=int)
     data = Lesson.to_collection_dict(query, page, per_page, 'api.lessons')
