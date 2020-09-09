@@ -29,6 +29,19 @@ class PaginatedAPIMixin(object):
             }
         return data
 
+class LessonMixin(object):
+    @staticmethod
+    def to_ldict():
+        data = {
+            'name': self.name,
+            'subject': self.subject.first().name,
+            'year': self.year.first().name,
+            'module': self.module.first().name,
+            'level': self.module.first().name,
+            'link': url_for('static', filename=self.location)
+        }
+        return data
+
 l_plan_services = db.Table('l_plan_services',
     db.Column('l_plan_id', db.Integer, db.ForeignKey('l_plan.id')),
     db.Column('service_id', db.Integer, db.ForeignKey('service.id')))
@@ -262,7 +275,7 @@ lesson_level = db.Table('lesson_level',
     db.Column('level_id', db.Integer, db.ForeignKey('level.id'), primary_key=True)
 )
 
-class Lesson(PaginatedAPIMixin, db.Model):
+class Lesson(LessonMixin, PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subject = db.relationship('Subject', secondary=lesson_subject, backref='lesson', lazy='dynamic')
     year = db.relationship('Year', secondary=lesson_year, backref='lesson', lazy='dynamic')
@@ -276,21 +289,26 @@ class Lesson(PaginatedAPIMixin, db.Model):
     video_url = db.Column(db.Unicode())
     worksheet_answers_url = db.Column(db.Unicode())
 
-    def __init__(self, name):
+    def __init__(self, name, subject, year, module, level):
         self.name = name
-        """#self.subject.append(subject)
-        #self.year.append(year)
-        #self.module.append(module)
-        #self.level.append(level)
-        #s = Subject.query.join(lesson_subject, (lesson_subject.c.lesson_id == self.id)).first()
-        #y = Year.query.join(lesson_year, (lesson_year.c.lesson_id == self.id)).first()
-        #m = Module.query.join(lesson_module, (lesson_module.c.lesson_id == self.id)).first()
-        #l = Level.query.join(lesson_level, (lesson_level.c.lesson_id == self.id)).first()
-        #location = 'lessons' + '/' + str(s) + '/' + str(y) + '/' + str(m) + '/' + str(l) + '/' + str(self.name) + '.svg'
-        #self.url = str(url_for('static', filename=location))
-        #base_path = os.path.join(basedir, 'app/static/' + location)
-        #l = open(base_path, 'w+')
-        #l.close()"""
+        self.subject.append(subject)
+        self.year.append(year)
+        self.module.append(module)
+        self.level.append(level)
+        s = self.subject.first().sid
+        y = self.year.first().sid
+        m = self.module.first().sid
+        l = self.level.first().sid
+        filename = self.name + '.pdf'
+        location = 'lessons' + '\\' + s + '\\' + y + '\\' + m + '\\' + l
+        file_path = os.path.join(location, filename)
+        base_path = os.path.join(basedir, 'static\\' + location)
+        if not os.path.exists(base_path):
+            os.makedirs(base_path)
+        path = os.path.join(base_path, filename)
+        self.url = file_path
+        l = open(path, 'w+')
+        l.close()
         db.session.add(self)
         db.session.commit()
 
