@@ -355,32 +355,6 @@ class Year(PaginatedAPIMixin, db.Model):
     def __repr__(self):
             return 'name {}'.format(self.name)
 
-class Post(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default = datetime.utcnow)
-    comments = db.relationship('Comments', backref='post', lazy=True)
-    name = db.Column(db.Unicode)
-
-blog_posts = db.Table('blog_post',
-    db.Column('blog_id', db.Integer, db.ForeignKey('blog.id'), primary_key=True),
-    db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True))
-
-class Comment(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default = datetime.utcnow)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'))
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    body = db.Column(db.UnicodeText)
-
-class Blog(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Unicode)
-    posts = db.relationship(Post, secondary=blog_posts, backref='blog', lazy=True )
-
-class Tag(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Unicode)
-
 class Module(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     sid = db.Column(db.String(3), unique=True)
