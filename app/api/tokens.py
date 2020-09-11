@@ -19,7 +19,7 @@ def get_token():
         return wrong_password('Wrong Password')
     if not user.confirmed:
         return payment_required('User is not subscribed')
-    token = user.get_token()
+    token = create_access_token(identity=q['email'])
     u = user.to_dict()
     u['token'] = token
     r = jsonify(u)
