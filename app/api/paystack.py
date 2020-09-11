@@ -53,32 +53,35 @@ def card():
     a = request.get_json()
     reference = a['reference']
     r = Transaction().verify(reference)
-    if r[3]['status'] == 'success':
-        if a['plan']:
-            plan = LPlan.query.filter_by(name=a['plan']).first()
-        c = r[3]['customer']
-        email = c['email']
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            user = User(email=c['email'], \
-                    first_name=c['first_name'], last_name=c['last_name'])
-            password = a['password']
-            user.set_password(password)
-            user.confirmed = True
-            db.session.add(user)
-        if plan:
-            user.subscribe(plan)
-        user.customer_code = c['customer_code']
-        card_auth = r[3]['authorization']['authorization_code']
-        card = Card.query.filter_by(authorization_code = card_auth).first()
-        if not card:
-            card = Card()
-            card.authorization_code = card_auth
-        db.session.add(card)
-        db.session.commit()
-        x = user.to_dict()
+    if r:
+        if r[3]['status'] == 'success':
+            if a['plan']:
+                plan = LPlan.query.filter_by(name=a['plan']).first()
+            c = r[3]['customer']
+            email = c['email']
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                user = User(email=c['email'], \
+                        first_name=c['first_name'], last_name=c['last_name'])
+                password = a['password']
+                user.set_password(password)
+                user.confirmed = True
+                db.session.add(user)
+            if plan:
+                user.subscribe(plan)
+            user.customer_code = c['customer_code']
+            card_auth = r[3]['authorization']['authorization_code']
+            card = Card.query.filter_by(authorization_code = card_auth).first()
+            if not card:
+                card = Card()
+                card.authorization_code = card_auth
+            db.session.add(card)
+            db.session.commit()
+            x = user.to_dict()
+        else:
+            return {'status': 'failed'}
     else:
-        return {'status': 'failed'}
+        return error_response("Sorry, we've got an error, it's personal")
     return jsonify(x)
 
 @bp.route('/paystack/get_customer/<email>', methods=['GET'])
