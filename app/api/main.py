@@ -20,4 +20,4 @@ def user_search(query):
     return jsonify(data)
 
 from app.api.learning import lessons, lessons_yr, lessons_md, lessons_lv, \
-    lesson, plans
+    lesson_page, plans

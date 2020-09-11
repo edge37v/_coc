@@ -7,6 +7,20 @@ from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request, payment_required
 
+@bp.route('/apexlnx/user_years', methods=['GET'])
+def user_years():
+    id=request.args.get(id)
+    u=User.query.get(id)
+    y = Year.to_collection_dict(u.years)
+    return y
+
+@bp.route('/apexlnx/user_modules', methods=['GET'])
+def user_modules():
+    id=request.args.get(id)
+    u=User.query.get(id)
+    m = Module.to_collection_dict(m.modules)
+    return m
+
 @bp.route('/apexlnx/levels', methods=['GET'])
 def levels():
     q = Level.to_collection_dict(Level.query)
@@ -96,7 +110,7 @@ def lessons_lv(sb, yr, md, lv):
 
 @bp.route('/apexlnx/lessons/<int:id>', methods=['GET'])
 @jwt_required
-def lesson(sb, position):
+def lesson_page(sb, position):
     shift = request.args.get('shift', 0, type=float)
     lesson = Lesson.query.filter(
                 Lesson.subject.any(sid=sb)).filter_by(

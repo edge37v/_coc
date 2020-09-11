@@ -23,3 +23,7 @@ name
 name
 posts - many_to_many - post
 
+.tag
+
+.lessons
+tags - many_to_many - tag

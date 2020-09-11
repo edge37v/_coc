@@ -1,3 +1,4 @@
+import re
 import base64, os, jwt
 from time import time
 from app import db, login
@@ -27,19 +28,6 @@ class PaginatedAPIMixin(object):
                 'prev': url_for(endpoint, page=page - 1, per_page=per_page,
                                 **kwargs) if resources.has_prev else None
             }
-        return data
-
-class LessonMixin(object):
-    @staticmethod
-    def to_ldict():
-        data = {
-            'name': self.name,
-            'subject': self.subject.first().name,
-            'year': self.year.first().name,
-            'module': self.module.first().name,
-            'level': self.module.first().name,
-            'link': url_for('static', filename=self.location)
-        }
         return data
 
 l_plan_services = db.Table('l_plan_services',
@@ -275,7 +263,7 @@ lesson_level = db.Table('lesson_level',
     db.Column('level_id', db.Integer, db.ForeignKey('level.id'), primary_key=True)
 )
 
-class Lesson(LessonMixin, PaginatedAPIMixin, db.Model):
+class Lesson(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subject = db.relationship('Subject', secondary=lesson_subject, backref='lesson', lazy='dynamic')
     year = db.relationship('Year', secondary=lesson_year, backref='lesson', lazy='dynamic')
@@ -284,10 +272,10 @@ class Lesson(LessonMixin, PaginatedAPIMixin, db.Model):
     name = db.Column(db.Unicode(), unique=True)
     position = db.Column(db.Integer)
     desc = db.Column(db.Unicode())
-    url = db.Column(db.Unicode())
-    worksheet_url = db.Column(db.Unicode())
+    path = db.Column(db.Unicode())
+    worksheet_path = db.Column(db.Unicode())
     video_url = db.Column(db.Unicode())
-    worksheet_answers_url = db.Column(db.Unicode())
+    worksheet_answers_path = db.Column(db.Unicode())
 
     def __init__(self, name, subject, year, module, level):
         self.name = name
@@ -295,18 +283,19 @@ class Lesson(LessonMixin, PaginatedAPIMixin, db.Model):
         self.year.append(year)
         self.module.append(module)
         self.level.append(level)
-        s = self.subject.first().sid
-        y = self.year.first().sid
-        m = self.module.first().sid
-        l = self.level.first().sid
-        filename = self.name + '.pdf'
+        s = subject.sid
+        y = year.sid
+        m = module.sid
+        l = level.sid
+        f = name.replace(' ', '_')
+        filename = f + '.pdf'
         location = 'lessons' + '\\' + s + '\\' + y + '\\' + m + '\\' + l
         file_path = os.path.join(location, filename)
         base_path = os.path.join(basedir, 'static\\' + location)
         if not os.path.exists(base_path):
             os.makedirs(base_path)
         path = os.path.join(base_path, filename)
-        self.url = file_path
+        self.path = file_path
         l = open(path, 'w+')
         l.close()
         db.session.add(self)
@@ -318,19 +307,16 @@ class Lesson(LessonMixin, PaginatedAPIMixin, db.Model):
     def to_dict(self):
         data = {
             'id': self.id,
-            'url': self.url,
+            'path': self.path,
             'subject': self.subject.first().name,
             'year': self.year.first().name,
             'module': self.module.first().name,
             'level': self.level.first().name,
             'name': self.name,
             'desc': self.desc,
-            'worksheet_url': self.worksheet_url,
+            'worksheet_path': self.worksheet_path,
             'video_url': self.video_url,
-            'worksheet_answers_url': self.worksheet_answers_url,
-            'links': {
-                'self': "url_for('api.lesson', id=self.id)"
-            }
+            'worksheet_answers_path': self.worksheet_answers_path,
         }
         return data
 
@@ -368,6 +354,32 @@ class Year(PaginatedAPIMixin, db.Model):
 
     def __repr__(self):
             return 'name {}'.format(self.name)
+
+class Post(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default = datetime.utcnow)
+    comments = db.relationship('Comments', backref='post', lazy=True)
+    name = db.Column(db.Unicode)
+
+blog_posts = db.Table('blog_post',
+    db.Column('blog_id', db.Integer, db.ForeignKey('blog.id'), primary_key=True),
+    db.Column('post_id', db.Integer, db.ForeignKey('post.id'), primary_key=True))
+
+class Comment(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default = datetime.utcnow)
+    post_id = db.Column(db.Integer, db.ForeignKey('post.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    body = db.Column(db.UnicodeText)
+
+class Blog(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Unicode)
+    posts = db.relationship(Post, secondary=blog_posts, backref='blog', lazy=True )
+
+class Tag(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Unicode)
 
 class Module(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)

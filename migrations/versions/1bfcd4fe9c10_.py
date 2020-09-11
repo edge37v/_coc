@@ -1,8 +1,8 @@
 """empty message
 
-Revision ID: fc730c0b9a45
+Revision ID: 1bfcd4fe9c10
 Revises: 
-Create Date: 2020-09-07 11:55:19.236867
+Create Date: 2020-09-10 02:37:55.773678
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'fc730c0b9a45'
+revision = '1bfcd4fe9c10'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -46,10 +46,10 @@ def upgrade():
     sa.Column('name', sa.Unicode(), nullable=True),
     sa.Column('position', sa.Integer(), nullable=True),
     sa.Column('desc', sa.Unicode(), nullable=True),
-    sa.Column('url', sa.Unicode(), nullable=True),
-    sa.Column('worksheet_url', sa.Unicode(), nullable=True),
+    sa.Column('path', sa.Unicode(), nullable=True),
+    sa.Column('worksheet_path', sa.Unicode(), nullable=True),
     sa.Column('video_url', sa.Unicode(), nullable=True),
-    sa.Column('worksheet_answers_url', sa.Unicode(), nullable=True),
+    sa.Column('worksheet_answers_path', sa.Unicode(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('name')
     )
@@ -114,6 +114,7 @@ def upgrade():
     op.create_index(op.f('ix_user_token'), 'user', ['token'], unique=True)
     op.create_table('year',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('year', sa.Integer(), nullable=True),
     sa.Column('sid', sa.String(length=3), nullable=True),
     sa.Column('name', sa.String(length=123), nullable=True),
     sa.PrimaryKeyConstraint('id'),
