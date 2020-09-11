@@ -42,7 +42,6 @@ def subjects():
     return jsonify(q)
 
 @bp.route('/apexlnx/lessons', methods=['POST'])
-#@jwt_required
 def lessons():
     q = request.get_json()
     query = Lesson.query.filter(Lesson.year.any(name=str(q['year']))).filter(
