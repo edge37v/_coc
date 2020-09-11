@@ -8,7 +8,6 @@ from app.api import bp
 from app.api.errors import wrong_password, bad_request, payment_required, error_response
 
 @bp.route('/tokens', methods=['POST'])
-#@cross_origin(automatic_options=True, supports_credentials=True, allow_headers=['Content-Type', 'Authorization'], vary_header=True, methods=['POST'])
 def get_token():
     q = request.get_json()
     d = Headers()
@@ -20,7 +19,7 @@ def get_token():
         return wrong_password('Wrong Password')
     if not user.confirmed:
         return payment_required('User is not subscribed')
-    token = create_access_token(identity=q['email'])
+    token = user.get_token()
     u = user.to_dict()
     u['token'] = token
     r = jsonify(u)
