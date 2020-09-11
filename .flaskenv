@@ -1,2 +1,0 @@
-FLASK_APP=apexlinks.py
-FLASK_ENV=development
