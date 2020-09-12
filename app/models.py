@@ -38,7 +38,8 @@ class PaginatedAPIMixin(object):
             }
         return data
 
-class Subscription(PaginatedMixin, db.Model):
+class Subscription(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
     year = db.relationship('Year', secondary=subscription_years, backref='subscription', lazy=True)
     module = db.relationship('Module', secondary=subscription_modules, backref='subscription', lazy=True)
     timestamp = db.Column(db.DateTime, default = datetime.utcnow)

@@ -42,7 +42,7 @@ def listen():
         module = metadata['module']
         email = metadata['email']
         password = metadata['password']
-        user = User(email=email, password)
+        user = User(email=email, password=password)
         user.subscribe(year, module)
         user.confirmed=true
         db.session.commit()
