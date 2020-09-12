@@ -9,12 +9,12 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 from flask import jsonify, current_app, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-subscription_modules = db.Table('subscription_modules',
-    db.Column('module_id', db.Integer, db.ForeignKey('module.id')),
-    db.Column('module_id', db.Integer, db.ForeignKey('module.id')))
-
 subscription_years = db.Table('subscription_years',
-    db.Column('year_id', db.Integer, db.ForeignKey('year.id')),
+    db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')),
+    db.Column('year_id', db.Integer, db.ForeignKey('year.id')))
+
+subscription_modules = db.Table('subscription_modules',
+    db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')),
     db.Column('module_id', db.Integer, db.ForeignKey('module.id')))
 
 class PaginatedAPIMixin(object):
