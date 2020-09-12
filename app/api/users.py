@@ -5,7 +5,16 @@ from app.models import User
 from app.api import bp
 from app.email import send_user_email
 from app.api.auth import token_auth
-from app.api.errors import bad_request
+from app.api.errors import response, bad_request
+
+@bp.route('/users/check', methods=['POST'])
+def check(email):
+    q = request.get_json()
+    email = q['email']
+    user = User.query.filter_by(email=email).first()
+    if user:
+        return response(200, True)
+    return response(401, False)
 
 @bp.route('/users/<int:id>', methods=['GET'])
 @jwt_required

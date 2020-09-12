@@ -9,6 +9,14 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 from flask import jsonify, current_app, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
+subscription_modules = db.Table('subscription_modules',
+    db.Column('module_id', db.Integer, db.ForeignKey('module.id')),
+    db.Column('module_id', db.Integer, db.ForeignKey('module.id')))
+
+subscription_years = db.Table('subscription_years',
+    db.Column('year_id', db.Integer, db.ForeignKey('year.id')),
+    db.Column('module_id', db.Integer, db.ForeignKey('module.id')))
+
 class PaginatedAPIMixin(object):
     @staticmethod
     def to_collection_dict(query, page=1, per_page=10, endpoint='', **kwargs):
@@ -29,6 +37,23 @@ class PaginatedAPIMixin(object):
                                 **kwargs) if resources.has_prev else None
             }
         return data
+
+class Subscription(PaginatedMixin, db.Model):
+    year = db.relationship('Year', secondary=subscription_years, backref='subscription', lazy=True)
+    module = db.relationship('Module', secondary=subscription_modules, backref='subscription', lazy=True)
+    timestamp = db.Column(db.DateTime, default = datetime.utcnow)
+    length = db.Column(db.Integer, default = 90)
+    expires_in = db.Column(db.DateTime)
+
+    def __init__(year, module):
+        year = Year.query.filter_by(name=year).first()
+        module = Module.query.filter_by(name=module).first()
+        self.year.append(year)
+        self.module.append(module)
+        self.expires_in = self.timestamp + timedelta(days = self.length)
+        db.session.add(self)
+        db.session.commit()
+
 
 l_plan_services = db.Table('l_plan_services',
     db.Column('l_plan_id', db.Integer, db.ForeignKey('l_plan.id')),
@@ -117,11 +142,16 @@ user_services = db.Table('user_services',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('service_id', db.Integer, db.ForeignKey('service.id')))
 
+user_subscriptions  = db.Table('user_subscriptions',
+    db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')))
+
 class User(PaginatedAPIMixin, UserMixin, db.Model):
         id = db.Column(db.Integer, primary_key=True)
         ps_id = db.Column(db.Integer)
         ps_code = db.Column(db.String())
         ps_email = db.Column(db.Unicode())
+        subscriptions = db.relationship('Subscription', secondary=user_subscriptions, backref='user')
         l_plans = db.relationship('LPlan', secondary=user_l_plans, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
         services = db.relationship('Service', secondary=user_services, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
         l_access = db.Column(db.Boolean(), default=False)
@@ -143,6 +173,12 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         location = db.Column(db.String(347))
         token = db.Column(db.String(32), index=True, unique=True)
         token_expiration = db.Column(db.DateTime)
+
+        def __init__(email, password):
+            self.email = 'email'
+            self.set_password(password)
+            db.session.add(self)
+            db.session.commit()
 
         def get_token(self, expires_in=36000):
             now = datetime.utcnow()
@@ -227,17 +263,16 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             return self.cards.filter(
                 user_cards.c.card_id == card.id).count() > 0
 
-        def subscribe(self, l_plan):
-            if not self.subscribed(l_plan):
-                self.l_plans.append(l_plan)
+        def subscribe(self, year, module):
+            s=Subscription(year, module)
+            self.subscriptions.append(s)
+            db.session.commit()
 
         def unsubscribe(self, l_plan):
-            if self.subscribed(l_plan):
-                self.l_plans.remove(l_plan)
+            pass
 
         def subscribed(self, l_plan):
-            return self.l_plans.filter(
-                user_l_plans.c.l_plan_id == l_plan.id).count() > 0
+            pass
 
         def gets_service(self, service):
             return self.service.filter(

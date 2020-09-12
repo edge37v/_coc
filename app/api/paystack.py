@@ -36,14 +36,15 @@ def p_test():
 def listen():
     a = request.get_json()
     if a['event'] == 'subscription_create':
-
-        c = a['customer']
-        q = a['authorization']
-        p = a[l_plan]
-        user = User(email=c['email'])
-        db.session.add(user)
-        l_plan = LPlan.query.filter_by(name=p['name']).first()
-        user.subscribe(l_plan)
+        data = a['data']
+        metadata = data['customer']['metadata']
+        year = metadata['year']
+        module = metadata['module']
+        email = metadata['email']
+        password = metadata['password']
+        user = User(email=email, password)
+        user.subscribe(year, module)
+        user.confirmed=true
         db.session.commit()
 
 @bp.route('paystack/init', methods=['POST'])
