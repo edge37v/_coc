@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"name": "flask",
+			"path": "..\\.."
+		},
+		{
+			"name": "dist",
+			"path": "..\\..\\..\\..\\apexlnx\\dist"
+		},
+		{
+			"name": "dist",
+			"path": "..\\..\\..\\..\\dist"
+		}
+	],
+	"settings": {}
+}

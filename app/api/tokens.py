@@ -5,7 +5,7 @@ from flask import make_response, request, jsonify, g
 from app import db
 from app.models import user_l_plans, User, LPlan
 from app.api import bp
-from app.api.errors import wrong_password, bad_request, payment_required, error_response
+from app.api.errors import wrong_password, bad_request, payment_required, response
 
 @bp.route('/tokens', methods=['POST'])
 def get_token():

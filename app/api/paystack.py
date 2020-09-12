@@ -4,11 +4,27 @@ from flask_cors import cross_origin
 from app import db
 from app.api import bp
 basedir = os.path.abspath(os.path.dirname(__file__))
-from app.api.errors import error_response, bad_request
+from app.api.errors import response, bad_request
 from app.models import User, Card, LPlan
 from app.api.auth import token_auth
 from pypaystack import Transaction, Customer
 import json
+
+@bp.before_request
+def log_request():
+    current_app.logger.debug('Request: %s', request)
+
+@bp.route('paystack/initialize', methods=['POST'])
+def initialize():
+    q = request.get_json()
+    email = q['email']
+    amount = q['amount']
+    metadata = q['metadata']
+    t = Transaction()
+    url = t.initialize(email=email, amount=amount, metadata=metadata)
+    if not url:
+        return response(500, 'Could not initialize the transaction')
+    return jsonify({'url':url})
 
 @bp.route('paystack/p_test', methods=['POST'])
 def p_test():
@@ -81,7 +97,7 @@ def card():
         else:
             return {'status': 'failed'}
     else:
-        return error_response("Sorry, we've got an error, it's personal")
+        return response("Sorry, we've got an error, it's personal")
     return jsonify(x)
 
 @bp.route('/paystack/get_customer/<email>', methods=['GET'])

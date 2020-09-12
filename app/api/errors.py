@@ -1,7 +1,7 @@
 from flask import jsonify
 from werkzeug.http import HTTP_STATUS_CODES
 
-def error_response(status_code, message=None):
+def response(status_code, message=None):
     payload = {'error': HTTP_STATUS_CODES.get(status_code, 'Unknown error')}
     if message:
         payload['message'] = message
@@ -10,10 +10,10 @@ def error_response(status_code, message=None):
     return response
 
 def wrong_password(message):
-    return error_response(401, message)
+    return response(401, message)
 
 def bad_request(message):
-    return error_response(400, message)
+    return response(400, message)
 
 def payment_required(message):
-    return error_response(402, message)
+    return response(402, message)

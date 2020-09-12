@@ -1,3 +1,11 @@
+Select module
+
+POST to apexlinks "initialize", data: email, amount, plan, metadata: password,, =>
+POST to paystack "initialize", data: email, amount, plan, metadata: password,, 
+
+CALLBACK : login
+
+
 add the object contexts
 make four more lessons
 
