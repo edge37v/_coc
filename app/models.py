@@ -94,104 +94,110 @@ user_subscriptions  = db.Table('user_subscriptions',
     db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')))
 
 class User(PaginatedAPIMixin, UserMixin, db.Model):
-        id = db.Column(db.Integer, primary_key=True)
-        ps_id = db.Column(db.Integer)
-        ps_code = db.Column(db.String())
-        ps_email = db.Column(db.Unicode())
-        subscriptions = db.relationship('Subscription', secondary=user_subscriptions, backref='user')
-        l_access = db.Column(db.Boolean(), default=False)
-        lesson_progress = db.Column(db.Unicode())
-        cards = db.relationship(Card, secondary=user_cards, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
-        logo_url = db.Column(db.Unicode)
-        customer_code = db.Column(db.Unicode)
-        email = db.Column(db.Unicode(123), unique=True)
-        confirmed = db.Column(db.Boolean, default=False)
-        first_name = db.Column(db.Unicode(123))
-        last_name = db.Column(db.Unicode(123))
-        password_hash = db.Column(db.String(123))
-        description = db.Column(db.Unicode(123))
-        about = db.Column(db.UnicodeText())
-        website = db.Column(db.String())
-        phone = db.Column(db.String())
-        timestamp = db.Column(db.DateTime, default=datetime.utcnow)
-        show_email = db.Column(db.Boolean, default=True)
-        location = db.Column(db.String(347))
-        token = db.Column(db.String(32), index=True, unique=True)
-        token_expiration = db.Column(db.DateTime)
+    id = db.Column(db.Integer, primary_key=True)
+    ps_id = db.Column(db.Integer)
+    ps_code = db.Column(db.String())
+    ps_email = db.Column(db.Unicode())
+    subscriptions = db.relationship('Subscription', secondary=user_subscriptions, backref='user')
+    l_access = db.Column(db.Boolean(), default=False)
+    lesson_progress = db.Column(db.Unicode())
+    cards = db.relationship(Card, secondary=user_cards, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
+    logo_url = db.Column(db.Unicode)
+    customer_code = db.Column(db.Unicode)
+    email = db.Column(db.Unicode(123), unique=True)
+    confirmed = db.Column(db.Boolean, default=False)
+    first_name = db.Column(db.Unicode(123))
+    last_name = db.Column(db.Unicode(123))
+    password_hash = db.Column(db.String(123))
+    description = db.Column(db.Unicode(123))
+    about = db.Column(db.UnicodeText())
+    website = db.Column(db.String())
+    phone = db.Column(db.String())
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    show_email = db.Column(db.Boolean, default=True)
+    location = db.Column(db.String(347))
+    token = db.Column(db.String(32), index=True, unique=True)
+    token_expiration = db.Column(db.DateTime)
 
-        def get_token(self, expires_in=36000):
-            now = datetime.utcnow()
-            if self.token and self.token_expiration > now + timedelta(seconds=60):
-                return self.token
-            self.token = base64.b64encode(os.urandom(24)).decode('utf-8')
-            self.token_expiration = now + timedelta(seconds=expires_in)
-            db.session.add(self)
+    def get_token(self, expires_in=36000):
+        now = datetime.utcnow()
+        if self.token and self.token_expiration > now + timedelta(seconds=60):
             return self.token
+        self.token = base64.b64encode(os.urandom(24)).decode('utf-8')
+        self.token_expiration = now + timedelta(seconds=expires_in)
+        db.session.add(self)
+        return self.token
 
-        def revoke_token(self):
-            self.token_expiration = datetime.utcnow() - timedelta(seconds=1)
+    def revoke_token(self):
+        self.token_expiration = datetime.utcnow() - timedelta(seconds=1)
 
-        @staticmethod
-        def check_token(token):
-            user = User.query.filter_by(token=token).first()
-            if user is None or user.token_expiration < datetime.utcnow():
-                return None
-            return user
-        
-        def get_utoken(self, expires_in=600):
-            return jwt.encode(
-                {'confirm_account': self.id, 'exp': time() + expires_in},
-                current_app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
+    @staticmethod
+    def check_token(token):
+        user = User.query.filter_by(token=token).first()
+        if user is None or user.token_expiration < datetime.utcnow():
+            return None
+        return user
+    
+    def get_utoken(self, expires_in=600):
+        return jwt.encode(
+            {'confirm_account': self.id, 'exp': time() + expires_in},
+            current_app.config['SECRET_KEY'], algorithm='HS256').decode('utf-8')
 
-        @staticmethod
-        def check_utoken(token):
-            try:
-               id = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])['confirm_account']
-            except:
-                return
-            return User.query.get(id)
+    @staticmethod
+    def check_utoken(token):
+        try:
+            id = jwt.decode(token, current_app.config['SECRET_KEY'], algorithms=['HS256'])['confirm_account']
+        except:
+            return
+        return User.query.get(id)
 
-        def __repr__(self):
-            return 'email: {}'.format(self.email)
+    def __repr__(self):
+        return 'email: {}'.format(self.email)
 
-        def set_password(self, password):
-            self.password_hash = generate_password_hash(password)
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
 
-        def check_password(self, password):
-            return check_password_hash(self.password_hash, password)
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
-        def from_dict(self, data, new_user=False):
-            for field in ['username', 'email', 'about', 'confirmed', 'first_name', 'last_name', 'phone']:
-                if field in data:
-                    setattr(self, field, data[field])
-                if 'password' in data:
-                    self.set_password(data['password'])
+    def to_dict(self):
+        data = {
+            'email': self.email
+        }
+        return data
 
-        def add_card(self, card):
-            if not self.has_card(card):
-                self.cards.append(card)
+    def from_dict(self, data, new_user=False):
+        for field in ['username', 'email', 'about', 'confirmed', 'first_name', 'last_name', 'phone']:
+            if field in data:
+                setattr(self, field, data[field])
+            if 'password' in data:
+                self.set_password(data['password'])
 
-        def remove_card(self, card):
-            if self.has_card(card):
-                self.remove(card)
+    def add_card(self, card):
+        if not self.has_card(card):
+            self.cards.append(card)
 
-        def has_card(self, card):
-            return self.cards.filter(
-                user_cards.c.card_id == card.id).count() > 0
+    def remove_card(self, card):
+        if self.has_card(card):
+            self.remove(card)
 
-        def subscribe(self, year, module):
-            s=Subscription(year, module)
-            self.subscriptions.append(s)
-            db.session.commit()
+    def has_card(self, card):
+        return self.cards.filter(
+            user_cards.c.card_id == card.id).count() > 0
 
-        def unsubscribe(self, year, module):
-            s=Subscription(year, module)
-            self.subscriptions.remove(s)
-            db.session.commit()
+    def subscribe(self, year, module):
+        s=Subscription(year, module)
+        self.subscriptions.append(s)
+        db.session.commit()
 
-        def subscribed(self, year, module):
-            return self.subscriptions.filter(
-                user_subscriptions.c.subscription_id == s.id).count()>0
+    def unsubscribe(self, year, module):
+        s=Subscription(year, module)
+        self.subscriptions.remove(s)
+        db.session.commit()
+
+    def subscribed(self, year, module):
+        return self.subscriptions.filter(
+            user_subscriptions.c.subscription_id == s.id).count()>0
 
 lesson_subject = db.Table('lesson_subject',
     db.Column('lesson_id', db.Integer, db.ForeignKey('lesson.id'), primary_key=True),
