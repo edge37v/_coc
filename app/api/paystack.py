@@ -5,7 +5,7 @@ from app import db
 from app.api import bp
 basedir = os.path.abspath(os.path.dirname(__file__))
 from app.api.errors import response, bad_request
-from app.models import User, Card, LPlan
+from app.models import User, Card, Year, Module
 from app.api.auth import token_auth
 from pypaystack import Transaction, Customer
 import json
@@ -72,20 +72,20 @@ def card():
     r = Transaction().verify(reference)
     if r:
         if r[3]['status'] == 'success':
-            if a['plan']:
-                plan = LPlan.query.filter_by(name=a['plan']).first()
+            year = a['year']
+            module = a['module']
+            password = a['password']
             c = r[3]['customer']
             email = c['email']
+            year = Year.query.filter_by(name=year).first()
+            module = Module.query.filter_by(name=module).first()
             user = User.query.filter_by(email=email).first()
             if not user:
-                user = User(email=c['email'], \
-                        first_name=c['first_name'], last_name=c['last_name'])
-                password = a['password']
-                user.set_password(password)
+                user = User(email=c['email'], first_name=c['first_name'], last_name=c['last_name'])
                 user.confirmed = True
                 db.session.add(user)
-            if plan:
-                user.subscribe(plan)
+            user.subscribe(year, module)
+            user.set_password(password)
             user.customer_code = c['customer_code']
             card_auth = r[3]['authorization']['authorization_code']
             card = Card.query.filter_by(authorization_code = card_auth).first()
@@ -98,7 +98,7 @@ def card():
         else:
             return {'status': 'failed'}
     else:
-        return response("Sorry, we've got an error, it's personal")
+        return response(500, "Sorry, we've got an error, it's personal")
     return jsonify(x)
 
 @bp.route('/paystack/get_customer/<email>', methods=['GET'])

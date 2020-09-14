@@ -46,15 +46,10 @@ class Subscription(PaginatedAPIMixin, db.Model):
     length = db.Column(db.Integer, default = 90)
     expires_in = db.Column(db.DateTime)
 
-    def __init__(year, module):
-        year = Year.query.filter_by(name=year).first()
-        module = Module.query.filter_by(name=module).first()
+    def __init__(self, year, module):
         self.year.append(year)
         self.module.append(module)
-        self.expires_in = self.timestamp + timedelta(days = self.length)
         db.session.add(self)
-        db.session.commit()
-
 
 l_plan_services = db.Table('l_plan_services',
     db.Column('l_plan_id', db.Integer, db.ForeignKey('l_plan.id')),
@@ -175,12 +170,6 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         token = db.Column(db.String(32), index=True, unique=True)
         token_expiration = db.Column(db.DateTime)
 
-        def __init__(email, password):
-            self.email = 'email'
-            self.set_password(password)
-            db.session.add(self)
-            db.session.commit()
-
         def get_token(self, expires_in=36000):
             now = datetime.utcnow()
             if self.token and self.token_expiration > now + timedelta(seconds=60):
@@ -267,7 +256,6 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         def subscribe(self, year, module):
             s=Subscription(year, module)
             self.subscriptions.append(s)
-            db.session.commit()
 
         def unsubscribe(self, l_plan):
             pass
