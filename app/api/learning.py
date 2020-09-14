@@ -7,20 +7,16 @@ from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request, payment_required
 
-@bp.before_request
-def log_request():
-    current_app.logger.debug('Request: %s', request)
-
 @bp.route('/apexlnx/user_years', methods=['GET'])
 def user_years():
-    id=request.args.get(id)
+    id=request.args.get('id')
     u=User.query.get(id)
     y = Year.to_collection_dict(u.years)
     return y
 
 @bp.route('/apexlnx/user_modules', methods=['GET'])
 def user_modules():
-    id=request.args.get(id)
+    id=request.args.get('id')
     u=User.query.get(id)
     m = Module.to_collection_dict(m.modules)
     return jsonify(m)
@@ -55,7 +51,6 @@ def lessons():
 
 @bp.route('/apexlnx/lessons/<yr>/<sb>', methods=['GET'])
 @cross_origin(allow_headers=['Content-Type'])
-#@jwt_required
 def lessons__yr(yr, sb):
     pass
 
