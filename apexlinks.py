@@ -14,15 +14,12 @@ def make_shell_context():
         'sci': Subject.query.filter_by(sid='sci').first(), \
         'mth': Subject.query.filter_by(sid='mth').first(), \
         'eng': Subject.query.filter_by(sid='eng').first(), \
-        'trn': Module.query.filter_by(sid='trn').first(), \
-        'win': Module.query.filter_by(sid='win').first(), \
-        'spg': Module.query.filter_by(sid='spg').first(), \
-        'sum': Module.query.filter_by(sid='sum').first(), \
+        'md1': Module.query.filter_by(sid='md1').first(), \
+        'md2': Module.query.filter_by(sid='md2').first(), \
+        'md3': Module.query.filter_by(sid='md3').first(), \
+        'md4': Module.query.filter_by(sid='md4').first(), \
         'bgn': Level.query.filter_by(sid='bgn').first(), \
         'prg': Level.query.filter_by(sid='prg').first(), \
         'ult': Level.query.filter_by(sid='ult').first()}
-
-#l_monthly
-#l_yearly
 
 
