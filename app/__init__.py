@@ -22,6 +22,7 @@ login.login_message = ('You gotta login first')
 
 def create_app():
     app = FlaskStaticCors(__name__)
+    CORS(app)
     #@app.after_request
     #def after_request(response):
     #    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')

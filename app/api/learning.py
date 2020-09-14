@@ -17,7 +17,9 @@ def user_years():
 @bp.route('/apexlnx/user_modules', methods=['GET'])
 def user_modules():
     id=request.args.get('id')
-    m = Module.to_collection_dict(m.modules)
+    user=User.query.get(id)
+
+    m = Module.to_collection_dict(user.modules)
     return jsonify(m)
 
 @bp.route('/apexlnx/modules', methods=['GET'])
