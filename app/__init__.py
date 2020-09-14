@@ -1,12 +1,12 @@
 import os, logging
-from flask import request
+from app.flask_static_cors import FlaskStaticCors
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from logging.handlers import SMTPHandler, RotatingFileHandler
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail
-from flask import Flask, url_for, request, current_app
+from flask import url_for, request, current_app
 from algoliasearch.search_client import SearchClient
 from config import Config
 basedir = os.path.abspath(os.path.dirname(__file__))
@@ -21,12 +21,11 @@ login.login_view = 'auth.login'
 login.login_message = ('You gotta login first')
 
 def create_app():
-    app = Flask(__name__)
-    CORS(app)
-    @app.after_request
-    def after_request(response):
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS')
+    app = FlaskStaticCors(__name__)
+    #@app.after_request
+    #def after_request(response):
+    #    response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+    #    response.headers.add('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE, OPTIONS')
     app.config.from_object(Config)
 
     db.init_app(app)
