@@ -180,23 +180,16 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 user_cards.c.card_id == card.id).count() > 0
 
         def subscribe(self, year, module):
-            if not self.subscribed(year, module):
-                s=Subscription.query.filter_by(year=year).filter_by(
-                    module=module).first()
-                if not s:
-                    s=Subscription(year, module)
-                self.subscriptions.append(s)
+            s=Subscription(year, module)
+            self.subscriptions.append(s)
+            db.session.commit()
 
         def unsubscribe(self, year, module):
-            if self.subscribed(year, module):
-                s=Subscription.query.filter_by(year=year).filter_by(
-                    module=module).first()
-                self.subscriptions.remove(s)
-                db.session.commit()
+            s=Subscription(year, module)
+            self.subscriptions.remove(s)
+            db.session.commit()
 
         def subscribed(self, year, module):
-            s = Subscription.query.filter_by(year=year).filter_by(
-                module=module).first()
             return self.subscriptions.filter(
                 user_subscriptions.c.subscription_id == s.id).count()>0
 

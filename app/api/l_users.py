@@ -5,6 +5,10 @@ from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request
 
+@bp.before_request
+def log_request():
+    current_app.logger.debug('Request: %s', request)
+
 @bp.route('/apexlnx/subscribe_user/<int:id>', methods=['PUT'])
 def subscribe_user():
     pass

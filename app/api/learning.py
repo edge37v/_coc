@@ -7,6 +7,10 @@ from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request, payment_required
 
+@bp.before_request
+def log_request():
+    current_app.logger.debug('Request: %s', request)
+
 @bp.route('/apexlnx/user_years', methods=['GET'])
 def user_years():
     id=request.args.get(id)

@@ -26,12 +26,6 @@ def initialize():
         return response(500, 'Could not initialize the transaction')
     return jsonify({'url':url})
 
-@bp.route('paystack/p_test', methods=['POST'])
-def p_test():
-    a = request.get_json()
-    iSay = a['iSay']
-    return jsonify({'you_said': iSay})
-
 @bp.route('paystack/listen', methods=['POST'])
 def listen():
     a = request.get_json()
@@ -97,17 +91,3 @@ def card():
     else:
         return response(500, "Sorry, we've got an error, it's personal")
     return jsonify(x)
-
-@bp.route('/paystack/get_customer/<email>', methods=['GET'])
-def get_customer(email):
-    customer = Customer()
-    user = User.query.filter_by(email=email).first()
-    response = customer.getone(user.ps_id)
-    return jsonify(response)
-
-@bp.route('/paystack/verify_transaction/<ref>', methods=['GET'])
-def verify_transaction(ref):
-    transaction = Transaction()
-    response = transaction.verify(ref)
-    return response
-
