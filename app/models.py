@@ -90,8 +90,8 @@ user_cards = db.Table('user_cards',
     db.Column('card_id', db.Integer, db.ForeignKey('card.id')))
 
 user_subscriptions  = db.Table('user_subscriptions',
-    db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')),
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id')))
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')))
 
 class User(PaginatedAPIMixin, UserMixin, db.Model):
         id = db.Column(db.Integer, primary_key=True)
@@ -181,7 +181,10 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
 
         def subscribe(self, year, module):
             if not self.subscribed(year, module):
-                s=Subscription(year, module)
+                s=Subscription.query.filter_by(year=year).filter_by(
+                    module=module).first()
+                if not s:
+                    s=Subscription(year, module)
                 self.subscriptions.append(s)
 
         def unsubscribe(self, year, module):
@@ -192,8 +195,10 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 db.session.commit()
 
         def subscribed(self, year, module):
-            return self.subscriptions.query.filter_by(year=year).filter_by(
-                module=module).count()>0
+            s = Subscription.query.filter_by(year=year).filter_by(
+                module=module).first()
+            return self.subscriptions.filter(
+                user_subscriptions.c.subscription_id == s.id).count()>0
 
 lesson_subject = db.Table('lesson_subject',
     db.Column('lesson_id', db.Integer, db.ForeignKey('lesson.id'), primary_key=True),
