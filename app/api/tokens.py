@@ -3,7 +3,7 @@ from flask_cors import cross_origin
 from werkzeug.datastructures import Headers
 from flask import make_response, request, jsonify, g
 from app import db
-from app.models import user_l_plans, User, LPlan
+from app.models import User
 from app.api import bp
 from app.api.errors import wrong_password, bad_request, payment_required, response
 

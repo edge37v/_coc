@@ -52,9 +52,6 @@ def init():
     a = request.get_json()
     email = a['email'] 
     t=Transaction()
-    p = a['l_plan']
-    l_plan = LPlan.query.get(p)
-    amount = l_plan.amount
     user=User.query.filter_by(email=email).first()
     if user:
         return bad_request('User already registered')
@@ -113,18 +110,4 @@ def verify_transaction(ref):
     transaction = Transaction()
     response = transaction.verify(ref)
     return response
-
-@bp.route('/paystack/charge_user', methods=['POST'])
-def charge_user():
-    data = request.get_json()
-    l_plan = data['l_plan']
-    user = data['user']
-    l_plan = LPlan.query.get(l_plan)
-    user = User.query.get(user)
-    transaction = Transaction()
-    response = transaction.charge(user.email, user.customer_code, l_plan.amount)
-    if response[3]['status'] == 'failed':
-        return {'status': 'failed'}
-    user.l_plans.append(l_plan)
-    return {'status': 'success'}
 

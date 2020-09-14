@@ -2,12 +2,12 @@ import re
 import base64, os, jwt
 from time import time
 from app import db, login
-from pypaystack import Plan
 from flask_login import UserMixin
 from datetime import datetime, timedelta
-basedir = os.path.abspath(os.path.dirname(__file__))
 from flask import jsonify, current_app, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
+
+basedir = os.path.abspath(os.path.dirname(__file__))
 
 subscription_years = db.Table('subscription_years',
     db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')),
@@ -51,47 +51,6 @@ class Subscription(PaginatedAPIMixin, db.Model):
         self.module.append(module)
         db.session.add(self)
 
-l_plan_services = db.Table('l_plan_services',
-    db.Column('l_plan_id', db.Integer, db.ForeignKey('l_plan.id')),
-    db.Column('service_id', db.Integer, db.ForeignKey('service.id')))
-
-class Service(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sid = db.Column(db.Unicode())
-    name = db.Column(db.Unicode())
-
-class LPlan(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    ps_id = db.Column(db.Integer())
-    name = db.Column(db.Unicode())
-    amount = db.Column(db.Integer)
-    year = db.Column(db.Unicode)
-    interval = db.Column(db.Unicode())
-    service = db.relationship(Service, secondary=l_plan_services, backref='l_plan', lazy='dynamic')
-
-    def __init__(self, name, amount, interval):
-        p = Plan()
-        p.create(name=name, amount=amount, interval=interval)
-        self.name = name
-        self.amount = amount
-        self.interval = interval
-        db.session.add(self)
-        db.session.commit()
-
-    def __repr__(self):
-        return 'Plan {}: {}'.format(self.id, self.name)
-
-    def to_dict(self):
-        data = {
-            'id': self.id,
-            'ps_id': self.ps_id,
-            'name': self.name,
-            'year': self.year,
-            'amount': self.amount,
-            'interval': self.interval,
-        }
-        return data
-
 class Card(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     authorization_code = db.Column(db.Unicode())
@@ -130,14 +89,6 @@ user_cards = db.Table('user_cards',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('card_id', db.Integer, db.ForeignKey('card.id')))
 
-user_l_plans = db.Table('user_l_plans',
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('l_plan_id', db.Integer, db.ForeignKey('l_plan.id')))
-
-user_services = db.Table('user_services',
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('service_id', db.Integer, db.ForeignKey('service.id')))
-
 user_subscriptions  = db.Table('user_subscriptions',
     db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')),
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')))
@@ -148,8 +99,6 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         ps_code = db.Column(db.String())
         ps_email = db.Column(db.Unicode())
         subscriptions = db.relationship('Subscription', secondary=user_subscriptions, backref='user')
-        l_plans = db.relationship('LPlan', secondary=user_l_plans, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
-        services = db.relationship('Service', secondary=user_services, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
         l_access = db.Column(db.Boolean(), default=False)
         lesson_progress = db.Column(db.Unicode())
         cards = db.relationship(Card, secondary=user_cards, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
@@ -211,29 +160,6 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         def check_password(self, password):
             return check_password_hash(self.password_hash, password)
 
-        def to_dict(self, include_email=False):
-            l = list(self.l_plans)
-            def get_l(l):
-                for i in range(len(l)):
-                    return {'plan': str(l[i])}
-            data = {
-                'id': self.id,
-                'confirmed': self.confirmed,
-                'email': self.email,
-                'first_name': self.first_name,
-                'last_name': self.last_name,
-                'phone': self.phone,
-                'about': self.about,
-                'password': 'love',
-                #'_links': {
-                #    'self': url_for('api.get_user', id = self.id)
-                #},
-                'l_plans': get_l(l)
-            }
-            #if include_email:
-            #    data['email'] = self.email
-            return data
-
         def from_dict(self, data, new_user=False):
             for field in ['username', 'email', 'about', 'confirmed', 'first_name', 'last_name', 'phone']:
                 if field in data:
@@ -254,18 +180,20 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
                 user_cards.c.card_id == card.id).count() > 0
 
         def subscribe(self, year, module):
+            if not self.subscribed(year, module):
             s=Subscription(year, module)
             self.subscriptions.append(s)
 
-        def unsubscribe(self, l_plan):
-            pass
+        def unsubscribe(self, year, module):
+            if self.subscribed(year, module):
+            s=Subscription.query.filter_by(year=year).filter_by(
+                module=module).first()
+            self.subscriptions.remove(s)
+            db.session.commit()
 
-        def subscribed(self, l_plan):
-            pass
-
-        def gets_service(self, service):
-            return self.service.filter(
-                user_services.c.service_id == service.id).count() > 0
+        def subscribed(self, year, module):
+            return self.subscriptions.query.filter_by(year=year).filter_by(
+                module=module).count()>0
 
 lesson_subject = db.Table('lesson_subject',
     db.Column('lesson_id', db.Integer, db.ForeignKey('lesson.id'), primary_key=True),
@@ -282,17 +210,11 @@ lesson_module = db.Table('lesson_module',
     db.Column('module_id', db.Integer, db.ForeignKey('module.id'), primary_key=True)
 )
 
-lesson_level = db.Table('lesson_level',
-    db.Column('lesson_id', db.Integer, db.ForeignKey('lesson.id'), primary_key=True),
-    db.Column('level_id', db.Integer, db.ForeignKey('level.id'), primary_key=True)
-)
-
 class Lesson(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     subject = db.relationship('Subject', secondary=lesson_subject, backref='lesson', lazy='dynamic')
     year = db.relationship('Year', secondary=lesson_year, backref='lesson', lazy='dynamic')
     module = db.relationship('Module', secondary=lesson_module, backref='lesson', lazy='dynamic')
-    level = db.relationship('Level', secondary=lesson_level, backref='lesson', lazy='dynamic')
     name = db.Column(db.Unicode(), unique=True)
     position = db.Column(db.Integer)
     desc = db.Column(db.Unicode())
@@ -301,19 +223,17 @@ class Lesson(PaginatedAPIMixin, db.Model):
     video_url = db.Column(db.Unicode())
     worksheet_answers_path = db.Column(db.Unicode())
 
-    def __init__(self, name, subject, year, module, level):
+    def __init__(self, name, subject, year, module):
         self.name = name
         self.subject.append(subject)
         self.year.append(year)
         self.module.append(module)
-        self.level.append(level)
         s = subject.sid
         y = year.sid
         m = module.sid
-        l = level.sid
         f = name.replace(' ', '_')
         filename = f + '.pdf'
-        location = 'lessons' + '\\' + s + '\\' + y + '\\' + m + '\\' + l
+        location = 'lessons' + '\\' + s + '\\' + y + '\\' + m
         file_path = os.path.join(location, filename)
         base_path = os.path.join(basedir, 'static\\' + location)
         if not os.path.exists(base_path):
@@ -335,7 +255,6 @@ class Lesson(PaginatedAPIMixin, db.Model):
             'subject': self.subject.first().name,
             'year': self.year.first().name,
             'module': self.module.first().name,
-            'level': self.level.first().name,
             'name': self.name,
             'desc': self.desc,
             'worksheet_path': self.worksheet_path,
@@ -396,21 +315,3 @@ class Module(PaginatedAPIMixin, db.Model):
 
     def __repr__(self):
             return 'name {}'.format(self.name)
-
-class Level(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sid = db.Column(db.String(3), unique=True)
-    name = db.Column(db.String(123), unique=True)
-    position = db.Column(db.Integer)
-
-    def to_dict(self):
-        data = {
-            'id': self.id,
-            'sid': self.sid,
-            'name': self.name
-        }
-
-        return data
-
-    def __repr__(self):
-            return 'name: {}'.format(self.name)

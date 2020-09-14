@@ -19,5 +19,4 @@ def user_search(query):
     data = User.to_collection_dict(query, 'api.search')
     return jsonify(data)
 
-from app.api.learning import lessons, lessons_yr, lessons_md, lessons_lv, \
-    lesson_page, plans
+from app.api.learning import lessons
