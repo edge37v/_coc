@@ -181,15 +181,15 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
 
         def subscribe(self, year, module):
             if not self.subscribed(year, module):
-            s=Subscription(year, module)
-            self.subscriptions.append(s)
+                s=Subscription(year, module)
+                self.subscriptions.append(s)
 
         def unsubscribe(self, year, module):
             if self.subscribed(year, module):
-            s=Subscription.query.filter_by(year=year).filter_by(
-                module=module).first()
-            self.subscriptions.remove(s)
-            db.session.commit()
+                s=Subscription.query.filter_by(year=year).filter_by(
+                    module=module).first()
+                self.subscriptions.remove(s)
+                db.session.commit()
 
         def subscribed(self, year, module):
             return self.subscriptions.query.filter_by(year=year).filter_by(
