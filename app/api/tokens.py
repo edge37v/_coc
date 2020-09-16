@@ -10,8 +10,8 @@ from app.api.errors import wrong_password, bad_request, payment_required, respon
 @bp.route('/tokens', methods=['POST'])
 def get_token():
     q = request.get_json()
-    d = Headers()
-    d.add_header('Access-Control-Allow-Origin', request.headers.get('Origin'))
+    headers = Headers()
+    headers.add('Access-Control-Allow-Origin', request.headers.get('Origin'))
     user = User.query.filter_by(email=q['email']).first()
     if not user:
         return bad_request('User does not exist')
@@ -20,11 +20,11 @@ def get_token():
     if not user.confirmed:
         return payment_required('User is not subscribed')
     token = create_access_token(identity=q['email'])
-    u = user.to_dict()
-    u['token'] = token
-    r = jsonify(u)
-    res = make_response(u, d)
-    return res
+    user_dict = user.to_dict()
+    user_dict['token'] = token
+    response_body = jsonify(user_dict)
+    response = make_response(response_body, headers)
+    return response
 
 @bp.route('/tokens', methods=['DELETE'])
 def revoke_token():

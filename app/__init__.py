@@ -6,7 +6,7 @@ from logging.handlers import SMTPHandler, RotatingFileHandler
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail
-from flask import url_for, request, current_app
+from flask import Flask, url_for, request, current_app
 from algoliasearch.search_client import SearchClient
 from config import Config
 basedir = os.path.abspath(os.path.dirname(__file__))

@@ -235,9 +235,9 @@ class Lesson(PaginatedAPIMixin, db.Model):
         s = subject.sid
         y = year.sid
         m = module.sid
-        f = name.replace(' ', '_')
+        f = self.name.replace(' ', '_')
         filename = f + '.pdf'
-        location = 'lessons' + '\\' + s + '\\' + y + '\\' + m
+        location = s + '\\' + y + '\\' + m
         file_path = os.path.join(location, filename)
         base_path = os.path.join(basedir, 'static\\' + location)
         if not os.path.exists(base_path):
