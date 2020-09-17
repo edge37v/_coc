@@ -68,8 +68,8 @@ def card():
             password = a['password']
             c = r[3]['customer']
             email = c['email']
-            year = Year.query.filter_by(name=year).first()
-            module = Module.query.filter_by(name=module).first()
+            #year = Year.query.filter_by(name=year).first()
+            #module = Module.query.filter_by(name=module).first()
             user = User.query.filter_by(email=email).first()
             if not user:
                 user = User(email=c['email'], first_name=c['first_name'], last_name=c['last_name'])
@@ -77,6 +77,7 @@ def card():
                 db.session.add(user)
             #user.subscribe(year, module)
             user.set_password(password)
+            user.confirmed = True
             user.customer_code = c['customer_code']
             card_auth = r[3]['authorization']['authorization_code']
             card = Card.query.filter_by(authorization_code = card_auth).first()

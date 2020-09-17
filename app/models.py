@@ -238,7 +238,7 @@ lesson_module = db.Table('lesson_module',
 
 class Lesson(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    kebab_name = db.Column(db.Unicode())
+    s3_name = db.Column(db.Unicode())
     subject = db.relationship('Subject', secondary=lesson_subject, backref='lesson', lazy='dynamic')
     year = db.relationship('Year', secondary=lesson_year, backref='lesson', lazy='dynamic')
     module = db.relationship('Module', secondary=lesson_module, backref='lesson', lazy='dynamic')
@@ -255,20 +255,8 @@ class Lesson(PaginatedAPIMixin, db.Model):
         self.subject.append(subject)
         self.year.append(year)
         self.module.append(module)
-        s = subject.sid
-        y = year.sid
-        m = module.sid
-        f = self.name.replace(' ', '_')
-        filename = f + '.pdf'
-        location = s + '\\' + y + '\\' + m
-        file_path = os.path.join(location, filename)
-        base_path = os.path.join(basedir, 'static\\' + location)
-        if not os.path.exists(base_path):
-            os.makedirs(base_path)
-        path = os.path.join(base_path, filename)
-        self.path = file_path
-        l = open(path, 'w+')
-        l.close()
+        f = name.replace(' ', '_') + '.pdf'
+        self.s3_name = f
         db.session.add(self)
         db.session.commit()
 
@@ -278,7 +266,7 @@ class Lesson(PaginatedAPIMixin, db.Model):
     def to_dict(self):
         data = {
             'id': self.id,
-            'path': self.path,
+            's3_name': self.s3_name,
             'subject': self.subject.first().name,
             'year': self.year.first().name,
             'module': self.module.first().name,
