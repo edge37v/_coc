@@ -63,8 +63,8 @@ def card():
     r = Transaction().verify(reference)
     if r:
         if r[3]['status'] == 'success':
-            year = a['year']
-            module = a['module']
+            #year = a['year']
+            #module = a['module']
             password = a['password']
             c = r[3]['customer']
             email = c['email']
@@ -75,7 +75,7 @@ def card():
                 user = User(email=c['email'], first_name=c['first_name'], last_name=c['last_name'])
                 user.confirmed = True
                 db.session.add(user)
-            user.subscribe(year, module)
+            #user.subscribe(year, module)
             user.set_password(password)
             user.customer_code = c['customer_code']
             card_auth = r[3]['authorization']['authorization_code']

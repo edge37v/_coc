@@ -1,4 +1,5 @@
 import re
+import boto3
 import base64, os, jwt
 from time import time
 from app import db, login
@@ -6,6 +7,17 @@ from flask_login import UserMixin
 from datetime import datetime, timedelta
 from flask import jsonify, current_app, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
+
+"""
+def update_lessons():
+    folder = []
+    for lesson in folder:
+        subject = Subject.query.filter_by(sid=lesson.subject).first()
+        year = Year.query.filter_by(sid=lesson.year).first()
+        module = Module.query.filter_by(sid=lesson.module).first()
+        Lesson(lesson.name, subject, year, module)
+        boto3.upload(lesson)
+"""
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 
@@ -40,16 +52,29 @@ class PaginatedAPIMixin(object):
 
 class Subscription(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    sid = db.Column(db.Unicode)
+    name = db.Column(db.Unicode)
     year = db.relationship('Year', secondary=subscription_years, backref='subscription', lazy=True)
     module = db.relationship('Module', secondary=subscription_modules, backref='subscription', lazy=True)
     timestamp = db.Column(db.DateTime, default = datetime.utcnow)
     length = db.Column(db.Integer, default = 90)
     expires_in = db.Column(db.DateTime)
 
+    def __repr__(self):
+        return '{} {}'.format(self.year[0], self.module[0])
+
+    def to_dict(self):
+        data = {
+            'year': self.year[0],
+            'module': self.module[0]
+        }
+        return data
+
     def __init__(self, year, module):
         self.year.append(year)
         self.module.append(module)
         db.session.add(self)
+        db.session.commit()
 
 class Card(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -95,9 +120,6 @@ user_subscriptions  = db.Table('user_subscriptions',
 
 class User(PaginatedAPIMixin, UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    ps_id = db.Column(db.Integer)
-    ps_code = db.Column(db.String())
-    ps_email = db.Column(db.Unicode())
     subscriptions = db.relationship('Subscription', secondary=user_subscriptions, backref='user')
     l_access = db.Column(db.Boolean(), default=False)
     lesson_progress = db.Column(db.Unicode())
@@ -216,6 +238,7 @@ lesson_module = db.Table('lesson_module',
 
 class Lesson(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    kebab_name = db.Column(db.Unicode())
     subject = db.relationship('Subject', secondary=lesson_subject, backref='lesson', lazy='dynamic')
     year = db.relationship('Year', secondary=lesson_year, backref='lesson', lazy='dynamic')
     module = db.relationship('Module', secondary=lesson_module, backref='lesson', lazy='dynamic')
@@ -250,7 +273,7 @@ class Lesson(PaginatedAPIMixin, db.Model):
         db.session.commit()
 
     def __repr__(self):
-            return 'name: {}'.format(self.name)
+            return '{}'.format(self.name)
             
     def to_dict(self):
         data = {
@@ -282,7 +305,7 @@ class Subject(PaginatedAPIMixin, db.Model):
         return data
 
     def __repr__(self):
-            return 'name {}'.format(self.name)
+            return '{}'.format(self.name)
 
 class Year(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -300,7 +323,7 @@ class Year(PaginatedAPIMixin, db.Model):
         return data
 
     def __repr__(self):
-            return 'name {}'.format(self.name)
+            return '{}'.format(self.name)
 
 class Module(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -318,4 +341,4 @@ class Module(PaginatedAPIMixin, db.Model):
         return data
 
     def __repr__(self):
-            return 'name {}'.format(self.name)
+            return '{}'.format(self.name)
