@@ -1,5 +1,5 @@
 from app import db
-from app.models import User
+from app.models import PaginatedAPIMixinUser
 
 class Forum(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -12,7 +12,7 @@ class Forum(db.Model):
 
     def to_dict(self):
         data = {
-            'name': self.name
+            'name': self.name`
         }
         return data
 
