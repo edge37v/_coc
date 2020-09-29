@@ -7,23 +7,23 @@ from app.api import bp
 from app.api.auth import token_auth
 from app.api.errors import bad_request, payment_required
 
-@bp.route('/apexlnx/modules', methods=['GET'])
+@bp.route('/learn/modules', methods=['GET'])
 def modules():
     q = Module.to_collection_dict(Module.query)
     return jsonify(q)
 
-@bp.route('/apexlnx/years', methods=['GET'])
+@bp.route('/learn/years', methods=['GET'])
 def years():
     q = Year.to_collection_dict(Year.query)
     return jsonify(q)
 
-@bp.route('/apexlnx/subjects', methods=['GET'])
+@bp.route('/learn/subjects', methods=['GET'])
 def subjects():
     q = Subject.to_collection_dict(Subject.query)
     return jsonify(q)
 
-@bp.route('/apexlnx/lessons', methods=['POST'])
-@jwt_required
+@bp.route('/learn/lessons', methods=['POST'])
+#jwt_required
 def lessons():
     q = request.get_json()
     query = Lesson.query.filter(Lesson.year.any(name=str(q['year']))).filter(

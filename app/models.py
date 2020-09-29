@@ -19,8 +19,6 @@ def update_lessons():
         boto3.upload(lesson)
 """
 
-basedir = os.path.abspath(os.path.dirname(__file__))
-
 subscription_years = db.Table('subscription_years',
     db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')),
     db.Column('year_id', db.Integer, db.ForeignKey('year.id')))
@@ -33,14 +31,15 @@ class PaginatedAPIMixin(object):
     @staticmethod
     def to_collection_dict(query, page=1, per_page=10, endpoint='', **kwargs):
         resources = query.paginate(page, per_page, False)
-        data = {'items': [item.to_dict() for item in resources.items]}
-        if page:
-            data['meta'] = {
-                'page': page,
-                'total_pages': resources.pages,
-                'total_items': resources.total
-            }
-        if endpoint:
+        data = {
+            'data': [item.to_dict() for item in resources.items]
+        }
+        data['meta'] = {
+            'page': page,
+            'total_pages': resources.pages,
+            'total_items': resources.total
+        }
+        if endpoint != '':
             data['_links'] = {
                 'self': url_for(endpoint, page=page, per_page=per_page, **kwargs),
                 'next': url_for(endpoint, page=page + 1, per_page=per_page, 
@@ -118,13 +117,22 @@ user_subscriptions  = db.Table('user_subscriptions',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')))
 
+user_saved_blog_posts = db.Table('user_saved_blog_posts',
+    db.Column)
+
 class User(PaginatedAPIMixin, UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    subscriptions = db.relationship('Subscription', secondary=user_subscriptions, backref='user')
+    images = db.relationship('Image', backref='user', )
+    subscriptions = db.relationship('Subscription', secondary=user_subscriptions, backref='user', lazy='dynamic')
     l_access = db.Column(db.Boolean(), default=False)
     lesson_progress = db.Column(db.Unicode())
+    sent_messages = db.relationship('Message', backref='sender', lazy=True)
+    received_messages = db.relationship('Message', backref='receiver', lazy=True)
+    saved_forum_posts = db.relationship('ForumPost', secondary=user_saved_forum_posts, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
+    saved_blog_posts = db.relationship('BlogPost', secondary=user_saved_blog_posts, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
     cards = db.relationship(Card, secondary=user_cards, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
     logo_url = db.Column(db.Unicode)
+    ads = db.relationship('Ad', backref='user', lazy='dynamic')
     customer_code = db.Column(db.Unicode)
     email = db.Column(db.Unicode(123), unique=True)
     confirmed = db.Column(db.Boolean, default=False)
@@ -250,7 +258,9 @@ class Lesson(PaginatedAPIMixin, db.Model):
     video_url = db.Column(db.Unicode())
     worksheet_answers_path = db.Column(db.Unicode())
 
+
     def __init__(self, name, subject, year, module):
+        #self.set_position(sci, position)
         self.name = name
         self.subject.append(subject)
         self.year.append(year)
@@ -259,6 +269,18 @@ class Lesson(PaginatedAPIMixin, db.Model):
         self.s3_name = f
         db.session.add(self)
         db.session.commit()
+
+    def set_position(self, subject, position):
+        count = Lesson.query.join(lesson_subject, lesson_subject.c.subject_id == subject.id).count()
+        if position is None:
+            self.position = count+1
+        if position > count:
+                raise BaseException('Position is more than count')
+        for i in range(position, count+1):
+            l = Lesson.query.filter_by(position=i).first()
+            if l:
+                l.position = l.position+1
+        self.postion = position
 
     def __repr__(self):
             return '{}'.format(self.name)

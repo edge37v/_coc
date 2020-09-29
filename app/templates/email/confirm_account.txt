@@ -1,3 +1,2 @@
-Hi.
-You recently made an account on Marketlnx using {{ user.email }}. To confirm this account, click here:
-{{ url_for('auth.confirm_account', token=token, _external=True) }}
+Click here on the following link to confirm your account:
+{{}}

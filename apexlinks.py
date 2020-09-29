@@ -1,15 +1,17 @@
 from app import create_app, db
-from app.models import Subscription, Year, Subject, Module, Lesson, User, Card
+from app.blog_models import Ad, Blog, Post
+from app.forum_models import Forum
+from app.models import  Subscription, Year, Subject, Module, Lesson, User, Card
 
 app = create_app()
 
 @app.shell_context_processor
 def make_shell_context():
     return {'Subscription': Subscription, 'Year': Year, \
-        'u': User.query.get(1), \
-        's': Subscription.query.get(1), \
+        'u': User.query.get(1), 'Blog': Blog, 'Post': Post, \
+        's': Subscription.query.get(1), 'Forum': Forum, \
         'Subject': Subject, 'Module': Module, 'Card': Card, \
-        'Lesson': Lesson, 'db': db, 'User': User, \
+        'Lesson': Lesson, 'db': db, 'User': User, 'Ad': Ad, \
         'yr1': Year.query.get(1), 'yr2': Year.query.get(2), \
         'yr3': Year.query.get(3), 'yr4': Year.query.get(4), \
         'yr5': Year.query.get(5), 'yr6': Year.query.get(6), \

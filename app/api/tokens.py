@@ -28,6 +28,8 @@ def get_token():
 
 @bp.route('/tokens', methods=['DELETE'])
 def revoke_token():
+    id = request.args['id']
+    user = User.query.get(id)
     user.revoke_token()
     db.session.commit()
     return '', 204

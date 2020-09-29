@@ -6,18 +6,13 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_mail import Mail
 from flask import Flask, url_for, request, current_app
-from algoliasearch.search_client import SearchClient
 from config import Config
 basedir = os.path.abspath(os.path.dirname(__file__))
-from flask_login import LoginManager
 
 jwt = JWTManager()
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
-login = LoginManager()
-login.login_view = 'auth.login'
-login.login_message = ('You gotta login first')
 
 def create_app():
     app = Flask(__name__)

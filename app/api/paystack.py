@@ -37,8 +37,9 @@ def listen():
         email = metadata['email']
         password = metadata['password']
         user = User(email=email, password=password)
+        db.session.add(user)
         user.subscribe(year, module)
-        user.confirmed=true
+        user.confirmed=True
         db.session.commit()
 
 @bp.route('paystack/init', methods=['POST'])
