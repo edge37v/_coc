@@ -8,11 +8,13 @@ from datetime import datetime, timedelta
 
 forum_posts = db.Table('forum_posts',
     db.Column('forum_id', db.Integer, db.ForeignKey('forum.id')),
-    db.Column('post_id', db.Integer, db.ForeignKey('post.id')))
+    db.Column('forumpost_id', db.Integer, db.ForeignKey('forumpost.id')))
 
 class Forum(PaginatedAPIMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode)
-    posts = db.relationship('ForumPost', secondary=forum_posts, backref='forum', lazy=True)
+    posts = db.relationship('Forumpost', secondary=forum_posts, backref='forum', lazy=True)
 
-class ForumPost(PaginatedAPIMixin, db.Model):
+class Forumpost(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    body = db.Column(db.Unicode)

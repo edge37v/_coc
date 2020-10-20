@@ -4,7 +4,7 @@ from flask_cors import cross_origin
 from app import db
 from app.api import bp
 basedir = os.path.abspath(os.path.dirname(__file__))
-from app.api.errors import response, bad_request
+from app.api.errors import res, bad_request
 from app.models import User, Card, Year, Module
 from app.api.auth import token_auth
 from pypaystack import Transaction, Customer
@@ -14,7 +14,7 @@ import json
 def log_request():
     current_app.logger.debug('Request: %s', request)
 
-@bp.route('paystack/initialize', methods=['POST'])
+@bp.route('/paystack/initialize', methods=['POST'])
 def initialize():
     q = request.get_json()
     email = q['email']
@@ -23,10 +23,10 @@ def initialize():
     t = Transaction()
     url = t.initialize(email=email, amount=amount, metadata=metadata)
     if not url:
-        return response(500, 'Could not initialize the transaction')
+        return res(500, 'Could not initialize the transaction')
     return jsonify({'url':url})
 
-@bp.route('paystack/listen', methods=['POST'])
+@bp.route('/paystack/listen', methods=['POST'])
 def listen():
     a = request.get_json()
     if a['event'] == 'subscription_create':
@@ -42,7 +42,7 @@ def listen():
         user.confirmed=True
         db.session.commit()
 
-@bp.route('paystack/init', methods=['POST'])
+@bp.route('/paystack/init', methods=['POST'])
 def init():
     a = request.get_json()
     email = a['email'] 
@@ -57,7 +57,7 @@ def init():
     auth_url = r[3]['authorization_url']
     return jsonify({'url': auth_url})
 
-@bp.route('paystack/card', methods=['POST'])
+@bp.route('/paystack/card', methods=['POST'])
 def card():
     a = request.get_json()
     reference = a['reference']
@@ -91,5 +91,5 @@ def card():
         else:
             return {'status': 'failed'}
     else:
-        return response(500, "Sorry, we've got an error, it's personal")
+        return res(500, "Sorry, we've got an error, it's personal")
     return jsonify(x)

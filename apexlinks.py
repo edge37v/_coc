@@ -1,14 +1,17 @@
 from app import create_app, db
-from app.blog_models import Ad, Blog, Post
-from app.forum_models import Forum
-from app.models import  Subscription, Year, Subject, Module, Lesson, User, Card
+from app.ad_models import Ad
+from flask import jsonify
+from app._37m import Text
+from app.blog_models import Blog, Blogpost
+from app.forum_models import Forum, Forumpost
+from app.models import Subscription, Year, Subject, Module, Lesson, User, Card
 
 app = create_app()
 
 @app.shell_context_processor
 def make_shell_context():
-    return {'Subscription': Subscription, 'Year': Year, \
-        'u': User.query.get(1), 'Blog': Blog, 'Post': Post, \
+    return {'jsonify': jsonify, 'Subscription': Subscription, 'Year': Year, 'Forumpost': Forumpost, \
+        'u': User.query.get(1), 'Blog': Blog, 'Text': Text, 'Blogpost': Blogpost, \
         's': Subscription.query.get(1), 'Forum': Forum, \
         'Subject': Subject, 'Module': Module, 'Card': Card, \
         'Lesson': Lesson, 'db': db, 'User': User, 'Ad': Ad, \

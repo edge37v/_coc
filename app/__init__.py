@@ -23,24 +23,9 @@ def create_app():
     jwt.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
-    login.init_app(app)
 
-    from app.errors import bp as errors_bp
-    app.register_blueprint(errors_bp)
-
-    from app.api import bp as api_bp
-    app.register_blueprint(api_bp)
-
-    from .auth import bp as auth_bp
-    app.register_blueprint(auth_bp)
-
-    from .user import bp as user_bp
-    app.register_blueprint(user_bp)
-
-    from .pages import bp as pages_bp
-    app.register_blueprint(pages_bp)
-
-    from .models import User
+    from app.api import bp
+    app.register_blueprint(bp)
 
     if not app.debug and not app.testing:
         if not os.path.exists('logs'):

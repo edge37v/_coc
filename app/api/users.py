@@ -1,11 +1,11 @@
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, create_access_token
 from flask import g, abort, jsonify, request, url_for
 from app import db
 from app.models import User
 from app.api import bp
 from app.email import send_user_email
 from app.api.auth import token_auth
-from app.api.errors import response, bad_request
+from app.api.errors import res, bad_request
 
 @bp.route('/users/check', methods=['POST'])
 def check(email):
@@ -13,8 +13,8 @@ def check(email):
     email = q['email']
     user = User.query.filter_by(email=email).first()
     if user:
-        return response(200, True)
-    return response(401, False)
+        return res(200, True)
+    return res(401, False)
 
 @bp.route('/users/<int:id>', methods=['GET'])
 @jwt_required
@@ -31,20 +31,19 @@ def get_users():
 
 @bp.route('/users', methods=['POST'])
 def create_user():
-    data = request.get_json() or {}
-    if 'email' not in data or 'password' not in data:
+    q = request.get_json() or {}
+    if 'email' not in q or 'password' not in q:
         return bad_request('must include email and password fields')
-    if User.query.filter_by(email=data['email']).first():
+    if User.query.filter_by(email=q['email']).first():
         return bad_request('please use a different email')
     user = User()
-    user.from_dict(data, new_user=True)
+    user.from_dict(q, new_user=True)
+    user.token = create_access_token(identity=q['email'])
     db.session.add(user)
     db.session.commit()
-    #send_user_email(user)
-    response = jsonify(user.to_dict())
-    response.status_code = 201
-    response.headers['Location'] = url_for('api.get_user', id=user.id)
-    return response
+    res = jsonify({'user': user.to_dict()})
+    res.status_code = 201
+    return res
 
 @bp.route('/users/<int:id>', methods=['PUT'])
 @jwt_required

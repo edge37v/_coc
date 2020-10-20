@@ -2,22 +2,11 @@ import re
 import boto3
 import base64, os, jwt
 from time import time
-from app import db, login
+from app import db
 from flask_login import UserMixin
 from datetime import datetime, timedelta
 from flask import jsonify, current_app, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
-
-"""
-def update_lessons():
-    folder = []
-    for lesson in folder:
-        subject = Subject.query.filter_by(sid=lesson.subject).first()
-        year = Year.query.filter_by(sid=lesson.year).first()
-        module = Module.query.filter_by(sid=lesson.module).first()
-        Lesson(lesson.name, subject, year, module)
-        boto3.upload(lesson)
-"""
 
 subscription_years = db.Table('subscription_years',
     db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')),
@@ -39,6 +28,8 @@ class PaginatedAPIMixin(object):
             'total_pages': resources.pages,
             'total_items': resources.total
         }
+        if query.count() < 1:
+            data['data'] = []
         if endpoint != '':
             data['_links'] = {
                 'self': url_for(endpoint, page=page, per_page=per_page, **kwargs),
@@ -75,6 +66,58 @@ class Subscription(PaginatedAPIMixin, db.Model):
         db.session.add(self)
         db.session.commit()
 
+class Type(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+
+class Service(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    profile_id = db.Column(db.Integer, db.ForeignKey('profile.id'))
+    name = db.Column(db.Unicode)
+
+    def __init__(self, user, name):
+        self.user = user
+        self.name = name
+        db.session.add(self)
+        db.session.commit()
+
+class Product(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    profile_id = db.Column(db.Integer, db.ForeignKey('profile.id'))
+    name = db.Column(db.Unicode)
+
+    def __init__(self, user, name):
+        self.user = user
+        self.name = name
+        db.session.add(self)
+        db.session.commit()
+
+class Profile(PaginatedAPIMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    name = db.Column(db.Unicode)
+    type = db.Column(db.Unicode)
+    latitude = db.Column(db.Unicode)
+    longitude = db.Column(db.Unicode)
+    services = db.relationship('Service', backref='profile', lazy=True)
+    products = db.relationship('Product', backref='profile', lazy=True)
+
+    def __init__(self, user, name):
+        self.user = user
+        self.name = name
+        db.session.add(self)
+        db.session.commit()
+
+    def service_exists(name):
+        return Service.query.filter()
+
+    def add_service(self, name):
+        self.services.append(Service(self, name))
+        db.session.commit()
+
+    def add_product(self, name):
+        self.products.append(Product(self, name))
+        db.session.commit()
+
 class Card(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     authorization_code = db.Column(db.Unicode())
@@ -109,28 +152,38 @@ class Card(db.Model):
         for field in ['authorization_code', 'card_type', 'last4', 'exp_month', 'exp_year', 'bin', 'bank', 'signature', 'reusable', 'country_code']:
             setattr(self, field, data[field])
 
-user_cards = db.Table('user_cards',
+cards = db.Table('cards',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('card_id', db.Integer, db.ForeignKey('card.id')))
 
-user_subscriptions  = db.Table('user_subscriptions',
+subscriptions  = db.Table('subscriptions',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')))
 
-user_saved_blog_posts = db.Table('user_saved_blog_posts',
-    db.Column)
+saved_profiles = db.Table('saved_profiles',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('profile_id', db.Integer, db.ForeignKey('profile.id')))
+
+saved_blogposts = db.Table('saved_blogposts',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('blogpost_id', db.Integer, db.ForeignKey('blogpost.id')))
+
+saved_forumposts = db.Table('saved_forumposts',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('forumpost_id', db.Integer, db.ForeignKey('forumpost.id')))
 
 class User(PaginatedAPIMixin, UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    images = db.relationship('Image', backref='user', )
-    subscriptions = db.relationship('Subscription', secondary=user_subscriptions, backref='user', lazy='dynamic')
+    subscriptions = db.relationship('Subscription', secondary=subscriptions, backref='user', lazy='dynamic')
+    ls = db.Column(db.Unicode)
+    ly = db.Column(db.Unicode)
+    profiles = db.relationship('Profile', backref='users', lazy='dynamic')
     l_access = db.Column(db.Boolean(), default=False)
     lesson_progress = db.Column(db.Unicode())
-    sent_messages = db.relationship('Message', backref='sender', lazy=True)
-    received_messages = db.relationship('Message', backref='receiver', lazy=True)
-    saved_forum_posts = db.relationship('ForumPost', secondary=user_saved_forum_posts, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
-    saved_blog_posts = db.relationship('BlogPost', secondary=user_saved_blog_posts, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
-    cards = db.relationship(Card, secondary=user_cards, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
+    saved_forumposts = db.relationship('Forumpost', secondary=saved_forumposts, backref=db.backref('them', lazy='dynamic'), lazy='dynamic')
+    saved_blogposts = db.relationship('Blogpost', secondary=saved_blogposts, backref=db.backref('them', lazy='dynamic'), lazy='dynamic')
+    saved_profiles = db.relationship('Profile', secondary=saved_profiles, backref=db.backref('them', lazy='dynamic'), lazy='dynamic')
+    cards = db.relationship(Card, secondary=cards, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
     logo_url = db.Column(db.Unicode)
     ads = db.relationship('Ad', backref='user', lazy='dynamic')
     customer_code = db.Column(db.Unicode)
@@ -147,9 +200,9 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
     show_email = db.Column(db.Boolean, default=True)
     location = db.Column(db.String(347))
     token = db.Column(db.String(32), index=True, unique=True)
-    token_expiration = db.Column(db.DateTime)
+    #token_expiration = db.Column(db.DateTime)
 
-    def get_token(self, expires_in=36000):
+    """def get_token(self, expires_in=36000):
         now = datetime.utcnow()
         if self.token and self.token_expiration > now + timedelta(seconds=60):
             return self.token
@@ -167,7 +220,8 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
         if user is None or user.token_expiration < datetime.utcnow():
             return None
         return user
-    
+    """
+
     def get_utoken(self, expires_in=600):
         return jwt.encode(
             {'confirm_account': self.id, 'exp': time() + expires_in},
@@ -192,7 +246,9 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
 
     def to_dict(self):
         data = {
-            'email': self.email
+            'id': self.id,
+            'email': self.email,
+            'token': self.token
         }
         return data
 
@@ -213,7 +269,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
 
     def has_card(self, card):
         return self.cards.filter(
-            user_cards.c.card_id == card.id).count() > 0
+            cards.c.card_id == card.id).count() > 0
 
     def subscribe(self, year, module):
         s=Subscription(year, module)
@@ -227,7 +283,7 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
 
     def subscribed(self, year, module):
         return self.subscriptions.filter(
-            user_subscriptions.c.subscription_id == s.id).count()>0
+            subscriptions.c.subscription_id == s.id).count()>0
 
 lesson_subject = db.Table('lesson_subject',
     db.Column('lesson_id', db.Integer, db.ForeignKey('lesson.id'), primary_key=True),
@@ -252,22 +308,33 @@ class Lesson(PaginatedAPIMixin, db.Model):
     module = db.relationship('Module', secondary=lesson_module, backref='lesson', lazy='dynamic')
     name = db.Column(db.Unicode(), unique=True)
     position = db.Column(db.Integer)
-    desc = db.Column(db.Unicode())
-    path = db.Column(db.Unicode())
-    worksheet_path = db.Column(db.Unicode())
-    video_url = db.Column(db.Unicode())
-    worksheet_answers_path = db.Column(db.Unicode())
+    desc = db.Column(db.Unicode)
+    path = db.Column(db.Unicode)
+    html = db.Column(db.Unicode)
+    worksheet_path = db.Column(db.Unicode)
+    video_url = db.Column(db.Unicode)
+    worksheet_answers_path = db.Column(db.Unicode)
 
+    @staticmethod
+    def search(q, page, per_page):
+        if '*' in q or '_' in q:
+            _q = q.replace('_', '__')\
+                .replace('*', '%')\
+                .replace('?', '_')
+        else:
+            _q = '%{0}%'.format(q)
+        r = Lesson.query.filter(Lesson.name.ilike(_q))
+        return Lesson.to_collection_dict(r, page, per_page)
 
-    def __init__(self, name, subject, year, module):
+    def __init__(self, name, subject, year):
         #self.set_position(sci, position)
+        db.session.add(self)
         self.name = name
         self.subject.append(subject)
         self.year.append(year)
-        self.module.append(module)
-        f = name.replace(' ', '_') + '.pdf'
-        self.s3_name = f
-        db.session.add(self)
+        #self.module.append(module)
+        #f = name.replace(' ', '_') + '.pdf'
+        #self.s3_name = f
         db.session.commit()
 
     def set_position(self, subject, position):
@@ -291,7 +358,6 @@ class Lesson(PaginatedAPIMixin, db.Model):
             's3_name': self.s3_name,
             'subject': self.subject.first().name,
             'year': self.year.first().name,
-            'module': self.module.first().name,
             'name': self.name,
             'desc': self.desc,
             'worksheet_path': self.worksheet_path,
@@ -309,7 +375,7 @@ class Subject(PaginatedAPIMixin, db.Model):
         data = {
             'id': self.id,
             'sid': self.sid,
-            'name': self.name
+            'text': self.name
         }
 
         return data
