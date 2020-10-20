@@ -1,4 +1,5 @@
 from app import db
+
 from datetime import datetime
 from app.models import PaginatedAPIMixin
 
@@ -28,7 +29,7 @@ class Text(PaginatedAPIMixin, db.Model):
                 .replace('?', '_')
         else:
             _q = '%{0}%'.format(q)
-        r = Text.query.filter(Text.body.ilike(_q))
+        r = Text.query.filter(Text.body.ilike(_q)).order_by(Text.time.desc())
         return Text.to_collection_dict(r, page, per_page)
 
 

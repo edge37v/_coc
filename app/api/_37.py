@@ -13,7 +13,8 @@ def _37search():
 @bp.route('/add/<body>', methods=['POST'])
 def post(body):
     Text(body)
-    data = Text.to_collection_dict(Text.query, 1, 21)
+    query = Text.query.order_by(Text.time.desc())
+    data = Text.to_collection_dict(query, 1, 21)
     z = jsonify(data)
     return z
 
@@ -21,6 +22,6 @@ def post(body):
 def texts():
     q = request.args.get
     page = float(q('page'))
-    qq = Text.query
+    qq = Text.query.order_by(Text.time.desc())
     z = Text.to_collection_dict(qq, page, 21)
     return jsonify(z)
