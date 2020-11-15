@@ -1,60 +1,79 @@
 from flask_jwt_extended import jwt_required, create_access_token
 from flask import g, abort, jsonify, request, url_for
 from app import db
-from app.models import User
+from app.models import User, cdict
 from app.api import bp
 from app.email import send_user_email
 from app.api.auth import token_auth
 from app.api.errors import res, bad_request
 
-@bp.route('/users/check', methods=['POST'])
-def check(email):
-    q = request.get_json()
-    email = q['email']
-    user = User.query.filter_by(email=email).first()
-    if user:
-        return res(200, True)
-    return res(401, False)
+@bp.route('/search')
+def user_search():
+    console.log(request.args)
+    a = request.args.get
+    q = a('q')
+    id = q('id')
+    location = a('location')
+    s_page = a('s_page')
+    p_page = a('p_page')
+    return User.search(location, id, q, s_page, p_page, 37)
 
 @bp.route('/users/<int:id>', methods=['GET'])
-@jwt_required
-def get_user(id):
-    return jsonify(User.query.get_or_404(id).to_dict())
+def user(id):
+    user = User.query.get_or_404(id)
+    return jsonify(user.qdict())
+
+@bp.route('/service_user/<int:id>', methods=['GET'])
+def service_user(id):
+    user = Service.query.get(id).user
+    return jsonify(user.qdict())
 
 @bp.route('/users', methods=['GET'])
 @jwt_required
 def get_users():
     page = request.args.get('page', 1, type=int)
     per_page = min(request.args.get('per_page', 10, type=int), 100)
-    data = User.to_collection_dict(User.query, page, per_page, 'api.get_users')
+    user = User.to_cdict(User.query, page, per_page, 'api.get_users')
     return jsonify(data)
 
 @bp.route('/users', methods=['POST'])
 def create_user():
     q = request.get_json() or {}
-    if 'email' not in q or 'password' not in q:
-        return bad_request('must include email and password fields')
-    if User.query.filter_by(email=q['email']).first():
-        return bad_request('please use a different email')
+    errors = []
+    email = q['email']
+    password = q['password']
+    if email is None:
+        errors.append('Email required')
+        return jsonify({'errors': errors})
+    if password is None:
+        errors.append('Password required')
+        return jsonify({'errors': errors})
+    if User.query.filter_by(email=email).first():
+        errors.append('Email taken')
+        return jsonify({'errors': errors})
     user = User()
     user.from_dict(q, new_user=True)
-    user.token = create_access_token(identity=q['email'])
+    user.token = create_access_token(identity=email)
     db.session.add(user)
     db.session.commit()
-    res = jsonify({'user': user.to_dict()})
+    res = jsonify({'user': user.dict()})
     res.status_code = 201
     return res
 
 @bp.route('/users/<int:id>', methods=['PUT'])
 @jwt_required
 def update_user(id):
-    if g.current_user.id != id:
-        abort(403)
+    errors = []
+    print(request.get_json())
+    token = request.headers['Authorization']
     user = User.query.get_or_404(id)
-    data = request.get_json() or {}
+    data = request.get_json()
+    if user != User.query.filter_by(token = token).first():
+        return {}, 401
     if 'email' in data and data['email'] != user.email and \
             User.query.filter_by(email=data['email']).first():
-        return bad_request('please use a different email')
-    user.from_dict(data, new_user=False)
+        errors.append('Email taken')
+        return {'errors': errors}
+    user.from_dict(data)
     db.session.commit()
-    return jsonify(user.to_dict())
+    return {'user': user.dict()}

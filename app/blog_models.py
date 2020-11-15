@@ -1,7 +1,7 @@
 import random, re, boto3, base64, os, jwt
 from time import time
 from app import db
-from app.models import PaginatedAPIMixin
+from app.models import PageMixin
 from datetime import datetime, timedelta
 
 blog_posts = db.Table('blog_posts',
@@ -17,19 +17,19 @@ class Comment(db.Model):
         self.body = body
         self.post = post
 
-class Blog(PaginatedAPIMixin, db.Model):
+class Blog(PageMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode)
     posts = db.relationship('Blogpost', secondary=blog_posts, backref='blog', lazy=True)
 
-    def to_dict(self):
+    def dict(self):
         data = {
             'id': self.id,
             'name': self.name
         }
         return data
 
-class Blogpost(PaginatedAPIMixin, db.Model):
+class Blogpost(PageMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode)
     comments = db.relationship(Comment, backref='post', lazy=True)

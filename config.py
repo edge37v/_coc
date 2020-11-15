@@ -7,7 +7,8 @@ load_dotenv(os.path.join(basedir, '.env'))
 class Config(object):
     SECRET_KEY='dev'
     USERS_PER_PAGE = 10
-    ELASTICSEARCH_URL = os.environ.get('ELASTICSEARCH_URL')
+    ELASTICSEARCH_URL = os.environ.get('ELASTICSEARCH_URL') or \
+        'http://localhost:9200'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
         'sqlite:///' + os.path.join(basedir, 'app.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
@@ -21,3 +22,5 @@ class Config(object):
     MAIL_USERNAME = 'edge3769@gmail.com'
     MAIL_PASSWORD = 'loveGM1!'
     ADMINS = ['edge2347@gmail.com']
+    JWT_HEADER_TYPE = ''
+    JWT_ACCESS_TOKEN_EXPIRES = False

@@ -3,25 +3,61 @@ import boto3
 import base64, os, jwt
 from time import time
 from app import db
+from flask import jsonify
+from geopy import distance
 from flask_login import UserMixin
 from datetime import datetime, timedelta
 from flask import jsonify, current_app, request, url_for
 from werkzeug.security import check_password_hash, generate_password_hash
 
-subscription_years = db.Table('subscription_years',
-    db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')),
-    db.Column('year_id', db.Integer, db.ForeignKey('year.id')))
+from app.search import add_to_index, remove_from_index, query_index
 
-subscription_modules = db.Table('subscription_modules',
-    db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')),
-    db.Column('module_id', db.Integer, db.ForeignKey('module.id')))
+class SearchMixin(object):
+    @classmethod
+    def search(cls, expression, page):
+        ids, total = query_index(cls.__tablename__, expression, page, 37)
+        if total == 0:
+            return cls.query.filter_by(id=0), 0
+        when = []
+        for i in range(len(ids)):
+            when.append((ids[i], i))
+        return cls.to_cdict(cls.query.filter(cls.id.in_(ids)).order_by(
+            db.case(when, value=cls.id)))
 
-class PaginatedAPIMixin(object):
-    @staticmethod
-    def to_collection_dict(query, page=1, per_page=10, endpoint='', **kwargs):
+    @classmethod
+    def before_commit(cls, session):
+        session._changes = {
+            'add': list(session.new),
+            'update': list(session.dirty),
+            'delete': list(session.deleted)
+        }
+
+    @classmethod
+    def after_commit(cls, session):
+        for obj in session._changes['add']:
+            if isinstance(obj, SearchMixin):
+                add_to_index(obj.__tablename__, obj)
+        for obj in session._changes['update']:
+            if isinstance(obj, SearchMixin):
+                add_to_index(obj.__tablename__, obj)
+        for obj in session._changes['delete']:
+            if isinstance(obj, SearchMixin):
+                remove_from_index(obj.__tablename__, obj)
+        session._changes = None
+
+    @classmethod
+    def reindex(cls):
+        for obj in cls.query:
+            add_to_index(cls.__tablename__, obj)
+
+db.event.listen(db.session, 'before_commit', SearchMixin.before_commit)
+db.event.listen(db.session, 'after_commit', SearchMixin.after_commit)
+
+def cdict(query, page=1, per_page=37, endpoint='', **kwargs):
+        page = float(page)
         resources = query.paginate(page, per_page, False)
         data = {
-            'data': [item.to_dict() for item in resources.items]
+            'data': [item.dict() for item in resources.items]
         }
         data['meta'] = {
             'page': page,
@@ -40,82 +76,289 @@ class PaginatedAPIMixin(object):
             }
         return data
 
-class Subscription(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sid = db.Column(db.Unicode)
-    name = db.Column(db.Unicode)
-    year = db.relationship('Year', secondary=subscription_years, backref='subscription', lazy=True)
-    module = db.relationship('Module', secondary=subscription_modules, backref='subscription', lazy=True)
-    timestamp = db.Column(db.DateTime, default = datetime.utcnow)
-    length = db.Column(db.Integer, default = 90)
-    expires_in = db.Column(db.DateTime)
-
-    def __repr__(self):
-        return '{} {}'.format(self.year[0], self.module[0])
-
-    def to_dict(self):
+class PageMixin(object):
+    @staticmethod
+    def cdict(query, page=1, per_page=37, endpoint='', **kwargs):
+        page = float(page)
+        resources = query.paginate(page, per_page, False)
         data = {
-            'year': self.year[0],
-            'module': self.module[0]
+            'data': [item.dict() for item in resources.items]
+        }
+        data['meta'] = {
+            'page': page,
+            'total_pages': resources.pages,
+            'total_items': resources.total
+        }
+        if query.count() < 1:
+            data['data'] = []
+        if endpoint != '':
+            data['_links'] = {
+                'self': url_for(endpoint, page=page, per_page=per_page, **kwargs),
+                'next': url_for(endpoint, page=page + 1, per_page=per_page, 
+                                **kwargs) if resources.has_next else None,
+                'prev': url_for(endpoint, page=page - 1, per_page=per_page,
+                                **kwargs) if resources.has_prev else None
+            }
+        return data
+
+class Field(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    text = db.Column(db.Unicode)
+
+    def __init__(self, text):
+        self.text = text
+        db.session.add(self)
+        db.session.commit()
+
+    def dict(self):
+        data = {
+            'id': self.id,
+            'text': self.text
         }
         return data
 
-    def __init__(self, year, module):
-        self.year.append(year)
-        self.module.append(module)
+    @staticmethod
+    def search(q):
+        if '*' in q or '_' in q:
+            _q = q.replace('_', '__')\
+                .replace('_', '__')\
+                .replace('*', '%')\
+                .replace('?', '_')
+        else:
+            _q = '%{0}%'.format(q)
+        return Field.query.filter(Field.text.ilike(_q))
+
+class Location(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Unicode)
+    lat = db.Column(db.Float)
+    lon = db.Column(db.Float)
+
+    @staticmethod
+    def search(q):
+        if '*' in q or '_' in q:
+            _q = q.replace('_', '__')\
+                .replace('_', '__')\
+                .replace('*', '%')\
+                .replace('?', '_')
+        else:
+            _q = '%{0}%'.format(q)
+        return Location.query.filter(Location.name.ilike(_q))
+
+    def dict(self):
+        data = {
+            'id': self.id,
+            'text': self.name
+        }
+        return data
+
+    def __init__(self, name):
+        self.name = name
         db.session.add(self)
         db.session.commit()
 
-class Type(PaginatedAPIMixin, db.Model):
+class Token(db.Model):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-class Service(PaginatedAPIMixin, db.Model):
+class Service(PageMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    profile_id = db.Column(db.Integer, db.ForeignKey('profile.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    subservices = db.relationship('Subservice', backref='service', lazy='dynamic')
+    json = db.Column(db.JSON) 
     name = db.Column(db.Unicode)
+    about = db.Column(db.Unicode)
 
-    def __init__(self, user, name):
+    @staticmethod
+    def search(q, filters, s_page, p_page):
+        if '*' in q or '_' in q:
+            _q = q.replace('_', '__')\
+                .replace('_', '__')\
+                .replace('*', '%')\
+                .replace('?', '_')
+        else:
+            _q = '%{0}%'.format(q)
+        #n = User.query.filter(User.name.ilike(_q))
+        #e = User.query.filter(User.email.ilike(_q))
+        #p = User.query.filter(User.phone.ilike(_q))
+        #users = cdict(u, page, 37)
+        services = Service.query.filter(Service.name.ilike(_q))
+        products = Product.query.filter(Product.name.ilike(_q))
+        if filters:
+            for filter in filters:
+                services = services.filter(Service.json[filter.name] == filter.value)
+        """if location != '':
+            location = location.replace('%20', ' ')
+            services = services.join(User).filter(User.location.any(name=location))
+            products = products.join(User).filter(User.location.any(name=location))"""
+        #q = n.union(e).union(p)
+        #u = User.query.filter(User.location.any(name=location))
+        servs = cdict(services, s_page, 37)
+        prods = cdict(products, p_page, 37)
+        data = {
+            'services': servs,
+            'products': prods,
+        }
+        """if id:
+            user = User.query.get(id)
+            data['user'] = user.dict()"""
+        return jsonify(data)
+
+    def dict(self):
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'about': self.about,
+            'json': self.json
+        }
+        if self.user:
+            data['user'] = self.user.dict()
+        return data
+
+    @staticmethod
+    def exists(user, name):
+        return Service.query.filter_by(user_id = user.id).count()>0
+
+    def __init__(self, json, id, name):
+        user = User.query.get(id)
+        self.user = user
+        self.name = name
+        self.json = json
+        db.session.add(self)
+        db.session.commit()
+
+    @staticmethod
+    def delete(id):
+        db.session.delete(Service.query.get(id))
+
+class Subservice(PageMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Unicode)
+    price = db.Column(db.Unicode)
+    service_id = db.Column(db.Integer, db.ForeignKey('service.id'))
+
+    def dict(self):
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'price': self.price,
+            'service': self.service.dict()
+        }
+
+    def __init__(self, name, price, service):
+        self.name = name
+        self.price = price
+        self.service = service
+        db.session.add(self)
+        db.session.commit()
+
+class Productgroup(PageMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    name = db.Column(db.Unicode)
+    products  = db.relationship('Product', backref='group', lazy='dynamic')
+
+    def dict(self):
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'user': self.user.dict()
+        }
+        return data
+
+    def __init__(self, id, name):
+        user = User.query.get(id)
         self.user = user
         self.name = name
         db.session.add(self)
         db.session.commit()
 
-class Product(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    profile_id = db.Column(db.Integer, db.ForeignKey('profile.id'))
-    name = db.Column(db.Unicode)
+    @staticmethod
+    def added(group, product):
+        return group.products.filter_by(id = product.id).count()>0
 
-    def __init__(self, user, name):
+    @staticmethod
+    def add(user_id, group_id, product_id):
+        user = User.query.get(id)
+        group = Productgroup.query.get(id)
+        product = Product.query.get(pid)
+        if Productgroup.has(user, group):
+            if not Productgroup.added(group, product):
+                group.products.append(pr)
+                db.session.commit()
+
+    @staticmethod
+    def has(user, group):
+        return user.productgroups.filter_by(id = group.id).count()>0
+
+    @staticmethod
+    def edit(user_id, group_id, name):
+        user = User.query.get(user_id)
+        group = Productgroup.query.get(group_id)
+        if Productgroup.has(user, group):
+            group.name = name
+            db.session.commit()
+
+    @staticmethod
+    def delete(id):
+        db.session.delete(Productgroup.query.get(id))
+        db.session.commit()
+
+class Product(PageMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    group_id = db.Column(db.Integer, db.ForeignKey('productgroup.id'))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    subproducts = db.relationship('Subproduct', backref='product', lazy='dynamic')
+    json = db.Column(db.JSON) 
+    name = db.Column(db.Unicode)
+    about = db.Column(db.Unicode)
+
+    def dict(self):
+        data = {
+            'id': self.id,
+            'json': self.json,
+            'name': self.name,
+            'about': self.about,
+            'user': self.user.dict(),
+            'group': self.productgroup.dict()
+        }
+        return data
+
+    @staticmethod
+    def exists(user, name):
+        return Product.query.filter_by(user_id = user.id).count()>0
+
+    def __init__(self, json, user, name):
         self.user = user
         self.name = name
+        self.json = json
         db.session.add(self)
         db.session.commit()
 
-class Profile(PaginatedAPIMixin, db.Model):
+    @staticmethod
+    def delete(id):
+        db.session.delete(Service.query.get(id))
+
+class Subproduct(PageMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     name = db.Column(db.Unicode)
-    type = db.Column(db.Unicode)
-    latitude = db.Column(db.Unicode)
-    longitude = db.Column(db.Unicode)
-    services = db.relationship('Service', backref='profile', lazy=True)
-    products = db.relationship('Product', backref='profile', lazy=True)
+    price = db.Column(db.Unicode)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
 
-    def __init__(self, user, name):
-        self.user = user
+    def dict(self):
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'price': self.price,
+            'product': self.product.dict()
+        }
+        return data
+
+    def __init__(self, name, price, product):
         self.name = name
+        self.price = price
+        self.product = product
         db.session.add(self)
-        db.session.commit()
-
-    def service_exists(name):
-        return Service.query.filter()
-
-    def add_service(self, name):
-        self.services.append(Service(self, name))
-        db.session.commit()
-
-    def add_product(self, name):
-        self.products.append(Product(self, name))
         db.session.commit()
 
 class Card(db.Model):
@@ -131,7 +374,7 @@ class Card(db.Model):
     reusable = db.Column(db.Boolean())
     country_code = db.Column(db.Unicode())
 
-    def to_dict(self):
+    def dict(self):
         data = {
             'user_id': self.user_id,
             'authorizatiion_code': self.authorization_code,
@@ -156,13 +399,17 @@ cards = db.Table('cards',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('card_id', db.Integer, db.ForeignKey('card.id')))
 
-subscriptions  = db.Table('subscriptions',
+saved_products = db.Table('saved_products',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('subscription_id', db.Integer, db.ForeignKey('subscription.id')))
+    db.Column('product', db.Integer, db.ForeignKey('product.id')))
 
-saved_profiles = db.Table('saved_profiles',
+locations = db.Table('locations',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('profile_id', db.Integer, db.ForeignKey('profile.id')))
+    db.Column('location_id', db.Integer, db.ForeignKey('location.id')))
+
+saved_users = db.Table('saved_users',
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
+    db.Column('user_id', db.Integer, db.ForeignKey('user.id')))
 
 saved_blogposts = db.Table('saved_blogposts',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
@@ -172,25 +419,32 @@ saved_forumposts = db.Table('saved_forumposts',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('forumpost_id', db.Integer, db.ForeignKey('forumpost.id')))
 
-class User(PaginatedAPIMixin, UserMixin, db.Model):
+class User(PageMixin, UserMixin, db.Model):
+    __searchable__ = ['name', 'email', 'phone', ]
     id = db.Column(db.Integer, primary_key=True)
-    subscriptions = db.relationship('Subscription', secondary=subscriptions, backref='user', lazy='dynamic')
     ls = db.Column(db.Unicode)
     ly = db.Column(db.Unicode)
-    profiles = db.relationship('Profile', backref='users', lazy='dynamic')
+    tokens = db.relationship(Token, backref='user', lazy='dynamic')
     l_access = db.Column(db.Boolean(), default=False)
+    lat = db.Column(db.Float)
+    lon = db.Column(db.Float)
+    location = db.relationship('Location', secondary=locations, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
     lesson_progress = db.Column(db.Unicode())
+    openby = db.Column(db.DateTime)
+    closeby = db.Column(db.DateTime)
+    services = db.relationship('Service', backref='user', lazy='dynamic')
+    products = db.relationship('Product', backref='user', lazy='dynamic')
+    productgroups = db.relationship('Productgroup', backref='user', lazy='dynamic')
     saved_forumposts = db.relationship('Forumpost', secondary=saved_forumposts, backref=db.backref('them', lazy='dynamic'), lazy='dynamic')
     saved_blogposts = db.relationship('Blogpost', secondary=saved_blogposts, backref=db.backref('them', lazy='dynamic'), lazy='dynamic')
-    saved_profiles = db.relationship('Profile', secondary=saved_profiles, backref=db.backref('them', lazy='dynamic'), lazy='dynamic')
+    saved_users = db.relationship('User', secondary=saved_users, backref=db.backref('them', lazy='dynamic'), lazy='dynamic')
     cards = db.relationship(Card, secondary=cards, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
+    distance = db.Column(db.Unicode)
     logo_url = db.Column(db.Unicode)
-    ads = db.relationship('Ad', backref='user', lazy='dynamic')
     customer_code = db.Column(db.Unicode)
     email = db.Column(db.Unicode(123), unique=True)
     confirmed = db.Column(db.Boolean, default=False)
-    first_name = db.Column(db.Unicode(123))
-    last_name = db.Column(db.Unicode(123))
+    name = db.Column(db.Unicode(123))
     password_hash = db.Column(db.String(123))
     description = db.Column(db.Unicode(123))
     about = db.Column(db.UnicodeText())
@@ -198,9 +452,34 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
     phone = db.Column(db.String())
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     show_email = db.Column(db.Boolean, default=True)
-    location = db.Column(db.String(347))
     token = db.Column(db.String(32), index=True, unique=True)
+
+    marketlnx = db.Column(db.Boolean, default=False)
     #token_expiration = db.Column(db.DateTime)
+
+    def set_distance(self, distance):
+        self.distance = distance
+        db.session.add(self)
+        db.session.commit()
+
+    def edit_location(self, lat, lon):
+        self.longitude = lon
+        self.latitude = lat
+        db.session.add(self)
+        db.session.commit()
+
+    @staticmethod
+    def distance(lat, lon, e2):
+        e1 = (lat, lon)
+        e2 = (e2.lat, e2.lon)
+        return distance.distance(e1, e2).miles
+
+    @staticmethod
+    def sort(lat, lon, query):
+        for i in range(1, query.count()+1):
+            user = User.query.get(i)
+            user.set_distance(User.distance(lat, lon, user))
+        return query.order_by(User.distance.desc())  
 
     """def get_token(self, expires_in=36000):
         now = datetime.utcnow()
@@ -221,6 +500,13 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
             return None
         return user
     """
+
+    def __init__(self, name='', email='', password=''):
+        self.name=name
+        self.email=email
+        self.set_password(password)
+        db.session.add(self)
+        db.session.commit()
 
     def get_utoken(self, expires_in=600):
         return jwt.encode(
@@ -244,20 +530,48 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
 
-    def to_dict(self):
+    @staticmethod
+    def add_service(id, name):
+        user = User.query.get(id)
+        Service(user, name)
+
+    def dict(self):
         data = {
             'id': self.id,
+            'name': self.name,
             'email': self.email,
             'token': self.token
         }
+        if self.location == None:
+            data['location'] = self.location.first().name
         return data
 
-    def from_dict(self, data, new_user=False):
-        for field in ['username', 'email', 'about', 'confirmed', 'first_name', 'last_name', 'phone']:
-            if field in data:
-                setattr(self, field, data[field])
-            if 'password' in data:
-                self.set_password(data['password'])
+    def qdict(self):
+        data = {
+            'id': self.id,
+            'name': self.name,
+            'phone': self.phone,
+            'email': self.email,
+            'about': self.about,
+            'website': self.website,
+            'token': self.token,
+            'services': cdict(self.services),
+            'products': cdict(self.products)
+        }
+        if self.location == None:
+            data['location'] = self.location.first().name
+        return data
+
+    def from_dict(self, data):
+        self.email = data['email']
+        self.name = data['name']
+        self.about = data['about']
+        self.phone = data['phone']
+        self.website = data['website']
+        if 'password' in data:
+            self.set_password(data['password'])
+        db.session.add(self)
+        db.session.commit()
 
     def add_card(self, card):
         if not self.has_card(card):
@@ -284,137 +598,3 @@ class User(PaginatedAPIMixin, UserMixin, db.Model):
     def subscribed(self, year, module):
         return self.subscriptions.filter(
             subscriptions.c.subscription_id == s.id).count()>0
-
-lesson_subject = db.Table('lesson_subject',
-    db.Column('lesson_id', db.Integer, db.ForeignKey('lesson.id'), primary_key=True),
-    db.Column('subject_id', db.Integer, db.ForeignKey('subject.id'), primary_key=True)
-)
-
-lesson_year = db.Table('lesson_year',
-    db.Column('lesson_id', db.Integer, db.ForeignKey('lesson.id'), primary_key=True),
-    db.Column('year_id', db.Integer, db.ForeignKey('year.id'), primary_key=True)
-)
-
-lesson_module = db.Table('lesson_module',
-    db.Column('lesson_id', db.Integer, db.ForeignKey('lesson.id'), primary_key=True),
-    db.Column('module_id', db.Integer, db.ForeignKey('module.id'), primary_key=True)
-)
-
-class Lesson(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    s3_name = db.Column(db.Unicode())
-    subject = db.relationship('Subject', secondary=lesson_subject, backref='lesson', lazy='dynamic')
-    year = db.relationship('Year', secondary=lesson_year, backref='lesson', lazy='dynamic')
-    module = db.relationship('Module', secondary=lesson_module, backref='lesson', lazy='dynamic')
-    name = db.Column(db.Unicode(), unique=True)
-    position = db.Column(db.Integer)
-    desc = db.Column(db.Unicode)
-    path = db.Column(db.Unicode)
-    html = db.Column(db.Unicode)
-    worksheet_path = db.Column(db.Unicode)
-    video_url = db.Column(db.Unicode)
-    worksheet_answers_path = db.Column(db.Unicode)
-
-    @staticmethod
-    def search(q, page, per_page):
-        if '*' in q or '_' in q:
-            _q = q.replace('_', '__')\
-                .replace('*', '%')\
-                .replace('?', '_')
-        else:
-            _q = '%{0}%'.format(q)
-        r = Lesson.query.filter(Lesson.name.ilike(_q))
-        return Lesson.to_collection_dict(r, page, per_page)
-
-    def __init__(self, name, subject, year):
-        #self.set_position(sci, position)
-        db.session.add(self)
-        self.name = name
-        self.subject.append(subject)
-        self.year.append(year)
-        #self.module.append(module)
-        #f = name.replace(' ', '_') + '.pdf'
-        #self.s3_name = f
-        db.session.commit()
-
-    def set_position(self, subject, position):
-        count = Lesson.query.join(lesson_subject, lesson_subject.c.subject_id == subject.id).count()
-        if position is None:
-            self.position = count+1
-        if position > count:
-                raise BaseException('Position is more than count')
-        for i in range(position, count+1):
-            l = Lesson.query.filter_by(position=i).first()
-            if l:
-                l.position = l.position+1
-        self.postion = position
-
-    def __repr__(self):
-            return '{}'.format(self.name)
-            
-    def to_dict(self):
-        data = {
-            'id': self.id,
-            's3_name': self.s3_name,
-            'subject': self.subject.first().name,
-            'year': self.year.first().name,
-            'name': self.name,
-            'desc': self.desc,
-            'worksheet_path': self.worksheet_path,
-            'video_url': self.video_url,
-            'worksheet_answers_path': self.worksheet_answers_path,
-        }
-        return data
-
-class Subject(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sid = db.Column(db.String(3), unique=True)
-    name = db.Column(db.String(123), unique=True)
-
-    def to_dict(self):
-        data = {
-            'id': self.id,
-            'sid': self.sid,
-            'text': self.name
-        }
-
-        return data
-
-    def __repr__(self):
-            return '{}'.format(self.name)
-
-class Year(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    year = db.Column(db.Integer)
-    sid = db.Column(db.String(3), unique=True)
-    name = db.Column(db.String(123), unique=True)
-
-    def to_dict(self):
-        data = {
-            'id': self.id,
-            'sid': self.sid,
-            'name': self.name
-        }
-
-        return data
-
-    def __repr__(self):
-            return '{}'.format(self.name)
-
-class Module(PaginatedAPIMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    sid = db.Column(db.String(3), unique=True)
-    name = db.Column(db.String(123), unique=True)
-    position = db.Column(db.Integer)
-
-    def to_dict(self):
-        data = {
-            'id': self.id,
-            'sid': self.sid,
-            'name': self.name
-        }
-
-        return data
-
-    def __repr__(self):
-            return '{}'.format(self.name)

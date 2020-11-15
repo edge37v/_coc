@@ -19,7 +19,7 @@ def write():
 def get_forums():
     page = request.args['page']
     query = Forum.query.all()
-    items = Forum.to_collection_dict(query, page)
+    items = Forum.to_cdict(query, page)
     return jsonify(items)
 
 @bp.route('/get_forum', methods=['GET'])
@@ -27,5 +27,5 @@ def get_forum():
     id = request.args['id']
     page = request.args['page']
     query = Forumpost.query.join(forum_posts, forum_posts.c.forum_id == id)
-    items = Forumpost.to_collection_dict(query, page)
+    items = Forumpost.to_cdict(query, page)
     return jsonify(items)

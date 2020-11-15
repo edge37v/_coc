@@ -6,7 +6,7 @@ from app.api import bp
 @bp.route('/get_blogs', methods=['GET'])
 def get_blogs():
     page = float(request.args['page'])
-    items = Blog.to_collection_dict(Blog.query, page)
+    items = Blog.to_cdict(Blog.query, page)
     return jsonify(items)
 
 @bp.route('/get_blog', methods=['GET'])
@@ -14,7 +14,7 @@ def get_blog():
     id = request.args['id']
     page = float(request.args['page'])
     query = Blogpost.query.join(blog_posts, blog_posts.c.blog_id == id)
-    items = Blogpost.to_collection_dict(query, page)
+    items = Blogpost.to_cdict(query, page)
     return jsonify(items)
 
 @bp.route('/add_comment', methods=['POST'])
