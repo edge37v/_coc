@@ -4,6 +4,7 @@ from flask_cors import CORS
 from elasticsearch import Elasticsearch
 from logging.handlers import SMTPHandler, RotatingFileHandler
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy_searchable import make_searchable
 from flask_migrate import Migrate
 from flask_mail import Mail
 from flask import Flask, url_for, request, current_app
@@ -14,6 +15,8 @@ jwt = JWTManager()
 db = SQLAlchemy()
 migrate = Migrate()
 mail = Mail()
+
+make_searchable(db.metadata)
 
 def create_app():
     app = Flask(__name__)

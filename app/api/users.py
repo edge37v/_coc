@@ -7,9 +7,10 @@ from app.email import send_user_email
 from app.api.auth import token_auth
 from app.api.errors import res, bad_request
 
-@bp.route('/search')
+
+@bp.route('/users/search')
 def user_search():
-    console.log(request.args)
+    print(request.args)
     a = request.args.get
     q = a('q')
     id = q('id')
@@ -38,7 +39,7 @@ def get_users():
 
 @bp.route('/users', methods=['POST'])
 def create_user():
-    q = request.get_json() or {}
+    q = request.get_json()
     errors = []
     email = q['email']
     password = q['password']
@@ -51,11 +52,8 @@ def create_user():
     if User.query.filter_by(email=email).first():
         errors.append('Email taken')
         return jsonify({'errors': errors})
-    user = User()
-    user.from_dict(q, new_user=True)
+    user = User(email, password)
     user.token = create_access_token(identity=email)
-    db.session.add(user)
-    db.session.commit()
     res = jsonify({'user': user.dict()})
     res.status_code = 201
     return res

@@ -9,8 +9,9 @@ class Config(object):
     USERS_PER_PAGE = 10
     ELASTICSEARCH_URL = os.environ.get('ELASTICSEARCH_URL') or \
         'http://localhost:9200'
+    FRONT_END = os.environ.get('FRONT_END')
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'sqlite:///' + os.path.join(basedir, 'app.db')
+        'postgresql://postgres:love@localhost:5432/marketlinks'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     CORS_HEADERS = 'Content-Type'
     LANGUAGES = ['en', 'es']
