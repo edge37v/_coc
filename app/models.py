@@ -191,18 +191,26 @@ class Service(PageMixin, db.Model):
     @staticmethod
     def archive(id, token):
         user = User.query.filter_by(token=token).first()
+        if not user:
+            return {}, 401
         service = Service.query.get(id)
-        if service.user == user:
-            service.archived = True
-            db.session.commit()
+        if service.user != user:
+            return {'errors': ['Service does not belong to user']}
+        service.archived = True
+        db.session.commit()
 
     @staticmethod
     def unarchive(id, token):
+        errors = []
         user = User.query.filter_by(token=token).first()
+        if not user:
+            return {}, 401
         service = Service.query.get(id)
-        if service.user == user:
-            service.archived = False
-            db.session.commit()
+        if service.user != user:
+            return {'errors': ['Service does not belong to user']}
+        service.archived = False
+        db.session.commit()
+        return {}, 201
 
     @staticmethod
     def saved(user, service):
