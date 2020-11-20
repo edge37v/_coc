@@ -1,7 +1,23 @@
 from app.api import bp
-from app.models import Service
+from app.service_models import Service
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required
+
+@bp.route('/services', methods=['POST'])
+@jwt_required
+def add_service():
+    q = request.json.get
+    token = request.headers['Authorization']
+    name = q('name')
+    json = q('json')
+    s_class_id = q('s_class_id')
+    fields = q('fields')
+    about = q('about')
+    price = q('price')
+    paid_in = q('paid_in')
+    s = Service(json, token, name, s_class_id, fields, about, price, paid_in)
+    return jsonify({'service': s.dict()})
+
 
 @bp.route('/service/viewed/<int:id>', methods=['PUT'])
 def viewed(id):
@@ -12,31 +28,27 @@ def viewed(id):
     service = Service.query.get(id)
     service.json
 
-@bp.route('/services/save', methods=['PUT'])
+@bp.route('/services/save/<int:id>', methods=['PUT'])
 @jwt_required
-def save_service():
-    id = request.args.get('id')
+def save_service(id):
     token = request.headers['Authorization']
     return Service.save(id, token)
 
-@bp.route('/services/unsave', methods=['PUT'])
+@bp.route('/services/unsave/<int:id>', methods=['PUT'])
 @jwt_required
-def unsave_service():
-    id = request.args.get('id')
+def unsave_service(id):
     token = request.headers['Authorization']
     return Service.unsave(id, token)
 
-@bp.route('/services/archive', methods=['PUT'])
+@bp.route('/services/archive/<int:id>', methods=['PUT'])
 @jwt_required
-def archive_service():
-    ids = request.json.get('ids')
+def archive_service(id):
     token = request.headers['Authorization']
     return Service.archive(id, token)
 
-@bp.route('/services/unarchive', methods=['PUT'])
+@bp.route('/services/unarchive/<int:id>', methods=['PUT'])
 @jwt_required
-def unarchive_service():
-    id = request.args.get('id')
+def unarchive_service(id):
     token = request.headers['Authorization']
     return Service.unarchive(id, token)
 
@@ -49,20 +61,6 @@ def edit_service():
     name = q('name')
     json = q('json')
     return Service.edit(id, token, name, json)
-
-@bp.route('/services', methods=['POST'])
-@jwt_required
-def add_service():
-    q = request.json.get
-    token = request.headers['Authorization']
-    id = q('id')
-    name = q('name')
-    json = q('json')
-    about = q('about')
-    prices = q('prices')
-    currency = q('currency')
-    s = Service(json, id, name, about, prices, currency)
-    return jsonify({'service': s.dict()})
 
 @bp.route('/services', methods=['GET'])
 def services():

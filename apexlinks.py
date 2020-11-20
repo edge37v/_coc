@@ -1,8 +1,9 @@
-from app import create_app, db
 from flask import jsonify
+from app import create_app, db
+from app.service_models import Service
 from app.blog_models import Blog, Blogpost
 from app.forum_models import Forum, Forumpost
-from app.models import User, Field, Card, Service, Product, Location
+from app.models import User, Field, Card, Product, Location
 
 app = create_app()
 

@@ -7,6 +7,21 @@ from app.email import send_user_email
 from app.api.auth import token_auth
 from app.api.errors import res, bad_request
 
+@bp.route('/user/s_classes', methods=['GET'])
+@jwt_required
+def user_classes(id):
+    token = request.headers['Authorization']
+    user = User.query.filter_by(token=token).first()
+    page = request.args.get('page')
+    return jsonify(cdict(user.s_classes, page, 37))
+
+@bp.route('/user/s_categories/<int:id>', methods=['GET'])
+def user_s_categories(id):
+    q = request.args.get
+    page = q('page')
+    user = User.query.get(id)
+    return jsonify(cdict(user.s_classes, page, 37))
+
 
 @bp.route('/users/search')
 def user_search():
@@ -22,11 +37,6 @@ def user_search():
 @bp.route('/users/<int:id>', methods=['GET'])
 def user(id):
     user = User.query.get_or_404(id)
-    return jsonify(user.qdict())
-
-@bp.route('/service_user/<int:id>', methods=['GET'])
-def service_user(id):
-    user = Service.query.get(id).user
     return jsonify(user.qdict())
 
 @bp.route('/users', methods=['GET'])

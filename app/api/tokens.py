@@ -35,8 +35,9 @@ def get_token():
 
 @bp.route('/tokens', methods=['DELETE'])
 def revoke_token():
-    id = request.args['id']
-    user = User.query.get(id)
-    user.revoke_token()
-    db.session.commit()
+    token = request.headers.get('Authorization')
+    user = User.query.filter_by(token=token).first()
+    if user:
+        user.token = None
+        db.session.commit()
     return '', 204

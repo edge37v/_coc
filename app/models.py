@@ -169,223 +169,8 @@ class Token(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
 
-class Category(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Unicode)
-    services = db.relationship('Service', backref='category', lazy='dynamic')
-
-class Service(PageMixin, db.Model):
-    query_class = Query
-    search_vector = db.Column(TSVectorType('name'))
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    category_id = db.Column(db.Integer, db.ForeignKey('category.id'))
-    archived = db.Column(db.Boolean, default=False)
-    viewed = db.Column(db.JSON)
-    prices = db.Column(db.JSON)
-    json = db.Column(db.JSON) 
-    name = db.Column(db.Unicode)
-    about = db.Column(db.Unicode)
-    currency = db.Column(db.Unicode)
-
-    @staticmethod
-    def archive(id, token):
-        user = User.query.filter_by(token=token).first()
-        if not user:
-            return {}, 401
-        service = Service.query.get(id)
-        if service.user != user:
-            return {'errors': ['Service does not belong to user']}
-        service.archived = True
-        db.session.commit()
-
-    @staticmethod
-    def unarchive(id, token):
-        errors = []
-        user = User.query.filter_by(token=token).first()
-        if not user:
-            return {}, 401
-        service = Service.query.get(id)
-        if service.user != user:
-            return {'errors': ['Service does not belong to user']}
-        service.archived = False
-        db.session.commit()
-        return {}, 201
-
-    @staticmethod
-    def saved(user, service):
-        return user.saved_services.filter(saved_services.c.service_id == service.id).count()>0
-
-    @staticmethod
-    def save(id, token):
-        errors = []
-        user = User.query.filter_by(token=token).first()
-        service = Service.query.get(id)
-        if saved(user, service):
-            errors.append('Service ' + service.name + ' was already saved')
-            return {'errors': errors}
-        user.saved_services.append(service)
-        db.session.commit()
-        return {}, 201
-
-    @staticmethod
-    def unsave(id, token):
-        errors = []
-        user = User.query.filter_by(token=token).first()
-        service = Service.query.get(id)
-        if not saved(user, service):
-            errors.append("Service wasn't saved before")
-            return {'errors': errors}
-        user.saved_services.remove(service)
-        db.session.commit()
-        return {}, 201
-
-    @staticmethod
-    def search(q, filters=[], s_page=1, p_page=1):
-        if '*' in q or '_' in q:
-            _q = q.replace('_', '__')\
-                .replace('_', '__')\
-                .replace('*', '%')\
-                .replace('?', '_')
-        else:
-            _q = '%{0}%'.format(q)
-        #n = User.query.filter(User.name.ilike(_q))
-        #e = User.query.filter(User.email.ilike(_q))
-        #p = User.query.filter(User.phone.ilike(_q))
-        #users = cdict(u, page, 37)
-        services = Service.query.search('"' + _q + '"')
-        products = Product.query.filter(Product.name.ilike(_q))
-        #q = n.union(e).union(p)
-        #u = User.query.filter(User.location.any(name=location))
-        servs = cdict(services, s_page, 37)
-        prods = cdict(products, p_page, 37)
-        data = {
-            'services': servs,
-            'products': prods,
-        }
-        return jsonify(data)
-
-    def dict(self):
-        data = {
-            'id': self.id,
-            'name': self.name,
-            'about': self.about,
-            'json': self.json,
-            'user': self.user.dict()
-        }
-        return data
-
-    @staticmethod
-    def exists(user, name):
-        return Service.query.filter_by(user_id = user.id).count()>0
-
-    def __init__(self, json, id, name, about, prices, currency):
-        user = User.query.get(id)
-        self.user = user
-        self.name = name
-        self.about = about
-        self.currency = currency
-        self.prices = prices
-        self.json = json
-        db.session.add(self)
-        db.session.commit()
-
-    @staticmethod
-    def edit(id, token, name, json):
-        user = User.query.filter_by(token=token).first()
-        service = Service.query.get(id)
-        if service.user == user:
-            service.name = name
-            service.json = json
-            db.session.add(service)
-            db.session.commit()
-            return service
-        return {}, 401
-
-    @staticmethod
-    def delete(id, token):
-        user = User.query.filter_by(token=token).first()
-        service = Service.query.get(id)
-        if service.user == user:
-            db.session.delete(service)
-            db.session.commit()
-
-class Subservice(PageMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Unicode)
-    price = db.Column(db.Unicode)
-    service_id = db.Column(db.Integer, db.ForeignKey('service.id'))
-
-    def dict(self):
-        data = {
-            'id': self.id,
-            'name': self.name,
-            'price': self.price,
-            'service': self.service.dict()
-        }
-
-    def __init__(self, name, price, service):
-        self.name = name
-        self.price = price
-        self.service = service
-        db.session.add(self)
-        db.session.commit()
-
-class Productgroup(PageMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
-    name = db.Column(db.Unicode)
-    products  = db.relationship('Product', backref='group', lazy='dynamic')
-
-    def dict(self):
-        data = {
-            'id': self.id,
-            'name': self.name,
-            'user': self.user.dict()
-        }
-        return data
-
-    def __init__(self, id, name):
-        user = User.query.get(id)
-        self.user = user
-        self.name = name
-        db.session.add(self)
-        db.session.commit()
-
-    @staticmethod
-    def added(group, product):
-        return group.products.filter_by(id = product.id).count()>0
-
-    @staticmethod
-    def add(user_id, group_id, product_id):
-        user = User.query.get(id)
-        group = Productgroup.query.get(id)
-        product = Product.query.get(pid)
-        if Productgroup.has(user, group):
-            if not Productgroup.added(group, product):
-                group.products.append(pr)
-                db.session.commit()
-
-    @staticmethod
-    def has(user, group):
-        return user.productgroups.filter_by(id = group.id).count()>0
-
-    @staticmethod
-    def edit(user_id, group_id, name):
-        user = User.query.get(user_id)
-        group = Productgroup.query.get(group_id)
-        if Productgroup.has(user, group):
-            group.name = name
-            db.session.commit()
-
-    @staticmethod
-    def delete(id):
-        db.session.delete(Productgroup.query.get(id))
-        db.session.commit()
-
 class Product(PageMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    group_id = db.Column(db.Integer, db.ForeignKey('productgroup.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     json = db.Column(db.JSON) 
     name = db.Column(db.Unicode)
@@ -397,8 +182,7 @@ class Product(PageMixin, db.Model):
             'json': self.json,
             'name': self.name,
             'about': self.about,
-            'user': self.user.dict(),
-            'group': self.productgroup.dict()
+            'user': self.user.dict()
         }
         return data
 
@@ -417,28 +201,6 @@ class Product(PageMixin, db.Model):
     @staticmethod
     def delete(id):
         db.session.delete(Service.query.get(id))
-
-class Subproduct(PageMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.Unicode)
-    price = db.Column(db.Unicode)
-    product_id = db.Column(db.Integer, db.ForeignKey('product.id'))
-
-    def dict(self):
-        data = {
-            'id': self.id,
-            'name': self.name,
-            'price': self.price,
-            'product': self.product.dict()
-        }
-        return data
-
-    def __init__(self, name, price, product):
-        self.name = name
-        self.price = price
-        self.product = product
-        db.session.add(self)
-        db.session.commit()
 
 class Card(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -512,15 +274,19 @@ class User(PageMixin, UserMixin, db.Model):
     lat = db.Column(db.Float)
     lon = db.Column(db.Float)
     location = db.relationship('Location', secondary=locations, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
-    lesson_progress = db.Column(db.Unicode())
     openby = db.Column(db.DateTime)
     closeby = db.Column(db.DateTime)
+
+    s_categories = db.relationship('SCategory', backref='user', lazy='dynamic')
+    s_classes = db.relationship('SClass', backref='user', lazy='dynamic')
+    
     services = db.relationship('Service', backref='user', lazy='dynamic')
     products = db.relationship('Product', backref='user', lazy='dynamic')
+    
     saved_users = db.relationship('User', secondary=saved_users, backref=db.backref('savers', lazy='dynamic'), lazy='dynamic')
     saved_services = db.relationship('Service', secondary=saved_services, backref='savers', lazy='dynamic')
     saved_products = db.relationship('Product', secondary=saved_products, backref='savers', lazy='dynamic')
-    productgroups = db.relationship('Productgroup', backref='user', lazy='dynamic')
+    
     saved_forumposts = db.relationship('Forumpost', secondary=saved_forumposts, backref=db.backref('savers', lazy='dynamic'), lazy='dynamic')
     saved_blogposts = db.relationship('Blogpost', secondary=saved_blogposts, backref=db.backref('savers', lazy='dynamic'), lazy='dynamic')
     cards = db.relationship(Card, secondary=cards, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
@@ -528,7 +294,9 @@ class User(PageMixin, UserMixin, db.Model):
     logo_url = db.Column(db.Unicode)
     customer_code = db.Column(db.Unicode)
     email = db.Column(db.Unicode(123), unique=True)
+
     visible = db.Column(db.Boolean, default=False)
+    
     name = db.Column(db.Unicode(123))
     password_hash = db.Column(db.String(123))
     description = db.Column(db.Unicode(123))
@@ -539,7 +307,6 @@ class User(PageMixin, UserMixin, db.Model):
     show_email = db.Column(db.Boolean, default=True)
     token = db.Column(db.String(373), index=True, unique=True)
     marketlnx = db.Column(db.Boolean, default=False)
-    #token_expiration = db.Column(db.DateTime)
 
     def set_distance(self, distance):
         self.distance = distance
