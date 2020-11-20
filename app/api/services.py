@@ -3,6 +3,13 @@ from app.service_models import Service
 from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 
+@bp.route('/services/search', methods=['POST'])
+def search_services():
+    a = request.args.get
+    q = a('q')
+    page = a('page')
+    return Service.search(q, page)
+
 @bp.route('/services', methods=['POST'])
 @jwt_required
 def add_service():
@@ -18,7 +25,6 @@ def add_service():
     s = Service(json, token, name, s_class_id, fields, about, price, paid_in)
     return jsonify({'service': s.dict()})
 
-
 @bp.route('/service/viewed/<int:id>', methods=['PUT'])
 def viewed(id):
     json = request.json.get
@@ -28,17 +34,19 @@ def viewed(id):
     service = Service.query.get(id)
     service.json
 
-@bp.route('/services/save/<int:id>', methods=['PUT'])
+@bp.route('/services/save', methods=['PUT'])
 @jwt_required
 def save_service(id):
     token = request.headers['Authorization']
-    return Service.save(id, token)
+    ids = request.json.get('ids')
+    return Service.save(ids, token)
 
-@bp.route('/services/unsave/<int:id>', methods=['PUT'])
+@bp.route('/service/unsave', methods=['PUT'])
 @jwt_required
 def unsave_service(id):
     token = request.headers['Authorization']
-    return Service.unsave(id, token)
+    ids = request.json.get('ids')
+    return Service.unsave(ids, token)
 
 @bp.route('/services/archive/<int:id>', methods=['PUT'])
 @jwt_required
@@ -68,7 +76,7 @@ def services():
     id = q('id')
     page = q('page')
     s = Service.query.filter_by(user_id = id)
-    return jsonify(Service.cdict(s, page, 37))
+    return jsonify(Service.cdict(s, page))
 
 @bp.route('/services/<int:id>', methods=['GET'])
 def service(id):
@@ -76,9 +84,6 @@ def service(id):
 
 @bp.route('/services', methods=['DELETE'])
 def del_services():
-    q = request.args.get
     token = request.headers['Authorization']
-    ids = q('ids')
-    for id in ids:
-        Service.delete(id, token)
-    return jsonify({})
+    ids = request.args.get('ids')
+    return Service.delete(ids, token)

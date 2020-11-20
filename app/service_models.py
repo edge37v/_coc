@@ -148,7 +148,12 @@ class SClass(PageMixin, db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     paid_in = db.Column(db.Unicode)
 
-    def search(q):
+    @staticmethod
+    def qsearch(q, page):
+        return SClass.query.search('"' + q + '"', sort=True)
+
+    @staticmethod
+    def search(q, page):
         if '*' in q or '_' in q:
             _q = q.replace('_', '__')\
                 .replace('_', '__')\
@@ -159,7 +164,7 @@ class SClass(PageMixin, db.Model):
         q1 = SClass.query.filter(SClass.name.ilike(_q))
         #q2 = SClass.query.search('"' + q + '"', sort=True)
         #s_classes = q1.union(q2)
-        return jsonify([{'id': s.id, 'text': s.name} for s in q1])
+        return jsonify([{'id': s.id, 'text': s.name, 'archived': s.archived} for s in q1])
 
     def __init__(self, json, token, name, fields, paid_in):
         user = User.query.filter_by(token = token).first()
@@ -189,7 +194,6 @@ class SClass(PageMixin, db.Model):
                 s_class.archived = False
         db.session.commit()
         return {}, 202
-
 
     @staticmethod
     def added(service, s_class):
@@ -238,6 +242,7 @@ class SClass(PageMixin, db.Model):
             if s_class.user == user:
                 db.session.delete(s_class)
         db.session.commit()
+        return {}, 202
 
     def dict(self):
         data = {
@@ -295,53 +300,33 @@ class Service(PageMixin, db.Model):
         return user.saved_services.filter(saved_services.c.service_id == service.id).count()>0
 
     @staticmethod
-    def save(id, token):
-        errors = []
+    def save(ids, token):
         user = User.query.filter_by(token=token).first()
-        service = Service.query.get(id)
-        if saved(user, service):
-            errors.append('Service ' + service.name + ' was already saved')
-            return {'errors': errors}
-        user.saved_services.append(service)
+        for id in ids:
+            service = Service.query.get(id)
+            if service.user != user:
+                continue
+            if not saved(user, service):
+                user.saved_services.append(service)
         db.session.commit()
-        return {}, 201
+        return {}, 202
 
     @staticmethod
-    def unsave(id, token):
-        errors = []
+    def unsave(ids, token):
         user = User.query.filter_by(token=token).first()
-        service = Service.query.get(id)
-        if not saved(user, service):
-            errors.append("Service wasn't saved before")
-            return {'errors': errors}
-        user.saved_services.remove(service)
+        for id in ids:
+            service = Service.query.get(id)
+            if service.user != user:
+                continue
+            if saved(user, service):
+                user.saved_services.remove(service)
         db.session.commit()
-        return {}, 201
+        return {}, 202
 
     @staticmethod
-    def search(q, filters=[], s_page=1, p_page=1):
-        if '*' in q or '_' in q:
-            _q = q.replace('_', '__')\
-                .replace('_', '__')\
-                .replace('*', '%')\
-                .replace('?', '_')
-        else:
-            _q = '%{0}%'.format(q)
-        #n = User.query.filter(User.name.ilike(_q))
-        #e = User.query.filter(User.email.ilike(_q))
-        #p = User.query.filter(User.phone.ilike(_q))
-        #users = cdict(u, page, 37)
-        services = Service.query.search('"' + _q + '"', sort=True)
-        products = Product.query.filter(Product.name.ilike(_q))
-        #q = n.union(e).union(p)
-        #u = User.query.filter(User.location.any(name=location))
-        servs = cdict(services, s_page, 37)
-        prods = cdict(products, p_page, 37)
-        data = {
-            'services': servs,
-            'products': prods,
-        }
-        return jsonify(data)
+    def search(q, page):
+        services = Service.query.search('"' + q + '"', sort=True)
+        return cdict(services, page)
 
     def dict(self):
         data = {
@@ -389,9 +374,11 @@ class Service(PageMixin, db.Model):
         return {}, 401
 
     @staticmethod
-    def delete(id, token):
+    def delete(ids, token):
         user = User.query.filter_by(token=token).first()
         service = Service.query.get(id)
-        if service.user == user:
-            db.session.delete(service)
-            db.session.commit()
+        for id in ids:
+            if service.user == user:
+                db.session.delete(service)
+        db.session.commit()
+        return {}, 202

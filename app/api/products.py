@@ -21,7 +21,7 @@ def products():
     id = q('id')
     page = q('page')
     s = Product.query.filter_by(user_id = id)
-    return jsonify(Product.cdict(s, page, 37))
+    return jsonify(Product.cdict(s, page))
 
 @bp.route('/products/<int:id>', methods=['GET'])
 def product(id):

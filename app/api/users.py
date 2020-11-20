@@ -1,29 +1,41 @@
 from flask_jwt_extended import jwt_required, create_access_token
 from flask import g, abort, jsonify, request, url_for
 from app import db
-from app.models import User, cdict
 from app.api import bp
+from app.models import User, cdict
+from app.service_models import SClass
 from app.email import send_user_email
 from app.api.auth import token_auth
 from app.api.errors import res, bad_request
 
 @bp.route('/user/s_classes', methods=['GET'])
 @jwt_required
-def user_classes(id):
+def user_classes():
+    a = request.args.get
+    print(request.args)
     token = request.headers['Authorization']
     user = User.query.filter_by(token=token).first()
-    page = request.args.get('page')
-    return jsonify(cdict(user.s_classes, page, 37))
+    q = a('q')
+    page = a('page')
+    s_classes = SClass.query.filter_by(user=user).search('"' + q + '"')
+    return cdict(s_classes, page)
 
 @bp.route('/user/s_categories/<int:id>', methods=['GET'])
 def user_s_categories(id):
     q = request.args.get
     page = q('page')
     user = User.query.get(id)
-    return jsonify(cdict(user.s_classes, page, 37))
+    return jsonify(cdict(user.s_classes, page))
 
+@bp.route('/user/saved', methods=['GET'])
+@jwt_required
+def user_saved_items():
+    token = request.headers['Authorization']
+    user = User.query.filter_by(token=token).first()
+    page = request.args.get('page')
+    return cdict(user.saved_services, page)
 
-@bp.route('/users/search')
+@bp.route('/users/search', methods=['GET'])
 def user_search():
     print(request.args)
     a = request.args.get
@@ -32,7 +44,7 @@ def user_search():
     location = a('location')
     s_page = a('s_page')
     p_page = a('p_page')
-    return User.search(location, id, q, s_page, p_page, 37)
+    return User.search(location, id, q, s_page, p_page)
 
 @bp.route('/users/<int:id>', methods=['GET'])
 def user(id):

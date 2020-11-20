@@ -82,5 +82,4 @@ def s_class(id):
 def del_s_classes():
     token = request.headers['Authorization']
     ids = request.json.get('ids')
-    SClass.delete(ids, token)
-    return {}, 202
+    return SClass.delete(ids, token)
