@@ -142,6 +142,8 @@ class SClass(PageMixin, db.Model):
     search_vector = db.Column(TSVectorType('name'))
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode)
+    json = db.Column(db.JSON)
+    about = db.Column(db.Unicode)
     fields = db.Column(db.JSON)
     archived = db.Column(db.Boolean, default=False)
     services = db.relationship('Service', backref='s_class', lazy='dynamic')
@@ -149,11 +151,13 @@ class SClass(PageMixin, db.Model):
     paid_in = db.Column(db.Unicode)
 
     @staticmethod
-    def qsearch(q, page):
-        return SClass.query.search('"' + q + '"', sort=True)
+    def qsearch(q, page, token):
+        user = User.query.filter_by(token=token).first()
+        return cdict(SClass.query.search('"' + q + '"', sort=True).filter(Sclass.user == user), page)
 
     @staticmethod
-    def search(q, page):
+    def search(q, token):
+        user = User.query.filter_by(token=token).first()
         if '*' in q or '_' in q:
             _q = q.replace('_', '__')\
                 .replace('_', '__')\
@@ -161,13 +165,13 @@ class SClass(PageMixin, db.Model):
                 .replace('?', '_')
         else:
             _q = '%{0}%'.format(q)
-        q1 = SClass.query.filter(SClass.name.ilike(_q))
-        #q2 = SClass.query.search('"' + q + '"', sort=True)
-        #s_classes = q1.union(q2)
+        q1 = SClass.query.filter(SClass.name.ilike(_q)).filter(SClass.user == user)
         return jsonify([{'id': s.id, 'text': s.name, 'archived': s.archived} for s in q1])
 
-    def __init__(self, json, token, name, fields, paid_in):
+    def __init__(self, json, about, token, name, fields, paid_in):
         user = User.query.filter_by(token = token).first()
+        self.json = json
+        self.about = about
         self.user = user
         self.name = name
         self.fields = fields
@@ -348,8 +352,8 @@ class Service(PageMixin, db.Model):
     def __init__(self, json, token, name, s_class_id, fields, about, price, paid_in):
         user = User.query.filter_by(token=token).first()
         if not user:
-            return {}, 401
-        s_class = SClass.query.get(id)
+            pass
+        s_class = SClass.query.get(s_class_id)
         self.user = user
         self.name = name
         self.s_class = s_class

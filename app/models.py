@@ -136,11 +136,12 @@ class Field(db.Model):
             _q = '%{0}%'.format(q)
         return Field.query.filter(Field.text.ilike(_q))
 
-class Location(db.Model):
+class Place(db.Model):
+    query_class = Query
+    search_vector = db.Column(TSVectorType('name'))
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode)
-    lat = db.Column(db.Float)
-    lon = db.Column(db.Float)
+    location = db.Column(db.JSON)
 
     @staticmethod
     def search(q):
@@ -151,7 +152,7 @@ class Location(db.Model):
                 .replace('?', '_')
         else:
             _q = '%{0}%'.format(q)
-        return Location.query.filter(Location.name.ilike(_q))
+        return Place.query.filter(Place.name.ilike(_q))
 
     def dict(self):
         data = {
@@ -160,8 +161,9 @@ class Location(db.Model):
         }
         return data
 
-    def __init__(self, name):
+    def __init__(self, name, location):
         self.name = name
+        self.location = location
         db.session.add(self)
         db.session.commit()
 
@@ -252,10 +254,6 @@ saved_products = db.Table('saved_products',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('product', db.Integer, db.ForeignKey('product.id')))
 
-locations = db.Table('locations',
-    db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
-    db.Column('location_id', db.Integer, db.ForeignKey('location.id')))
-
 saved_blogposts = db.Table('saved_blogposts',
     db.Column('user_id', db.Integer, db.ForeignKey('user.id')),
     db.Column('blogpost_id', db.Integer, db.ForeignKey('blogpost.id')))
@@ -273,7 +271,7 @@ class User(PageMixin, UserMixin, db.Model):
     l_access = db.Column(db.Boolean(), default=False)
     lat = db.Column(db.Float)
     lon = db.Column(db.Float)
-    location = db.relationship('Location', secondary=locations, backref=db.backref('users', lazy='dynamic'), lazy='dynamic')
+    location = db.Column(db.JSON)
     openby = db.Column(db.DateTime)
     closeby = db.Column(db.DateTime)
 
@@ -420,6 +418,7 @@ class User(PageMixin, UserMixin, db.Model):
         self.about = data['about']
         self.phone = data['phone']
         self.website = data['website']
+        self.location = data('location')
         if 'password' in data:
             self.set_password(data['password'])
         db.session.add(self)

@@ -10,14 +10,16 @@ from app.api.errors import res, bad_request
 
 @bp.route('/user/s_classes', methods=['GET'])
 @jwt_required
-def user_classes():
+def user_s_classes():
     a = request.args.get
     print(request.args)
     token = request.headers['Authorization']
     user = User.query.filter_by(token=token).first()
     q = a('q')
     page = a('page')
-    s_classes = SClass.query.filter_by(user=user).search('"' + q + '"')
+    if q == '':
+        return cdict(user.s_classes, page)
+    s_classes = SClass.query.search('"' + q + '"').filter_by(user=user)
     return cdict(s_classes, page)
 
 @bp.route('/user/s_categories/<int:id>', methods=['GET'])
@@ -82,7 +84,7 @@ def create_user():
 
 @bp.route('/users/<int:id>', methods=['PUT'])
 @jwt_required
-def update_user(id):
+def edit_user(id):
     errors = []
     print(request.get_json())
     token = request.headers['Authorization']

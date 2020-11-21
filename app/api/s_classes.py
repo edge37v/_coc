@@ -28,22 +28,33 @@ def edit_s_classes():
     paid_in = q('paid_in')
     return SClass.edit(id, token, name, fields, paid_in)
 
+@bp.route('/s_classes/qsearch', methods=['GET'])
+@jwt_required
+def search_s_classes_q():
+    token = request.headers['Authorization']
+    a = request.args.get
+    q = a('q')
+    page = a('page')
+    return SClass.qsearch(q, page, token)
+
 @bp.route('/s_classes/search', methods=['GET'])
 @jwt_required
 def search_s_classes():
+    token = request.headers['Authorization']
     q = request.args.get('q')
-    return SClass.search(q)
+    return SClass.search(q, token)
 
 @bp.route('/s_classes', methods=['POST'])
 @jwt_required
 def add_s_class():
-    q = request.json.get
+    j = request.json.get
     token = request.headers['Authorization']
-    json = q('json')
-    name = q('name')
-    fields = q('fields')
-    paid_in = q('paid_in')
-    s_class = SClass(json, token, name, fields, paid_in)
+    json = j('json')
+    name = j('name')
+    about = j('about')
+    fields = j('fields')
+    paid_in = j('paid_in')
+    s_class = SClass(json, about, token, name, fields, paid_in)
     return jsonify(s_class.dict())
 
 @bp.route('/s_classes/add_service', methods=['PUT'])
