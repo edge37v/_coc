@@ -1,14 +1,17 @@
 from app.api import bp
 from app.service_models import Service
-from flask import request, jsonify
+import add_field from app.api.fields
+from flask import request, jsonify, url_foe
 from flask_jwt_extended import jwt_required
 
-@bp.route('/services/search', methods=['POST'])
+@bp.route('/services/search', methods=['PUT'])
 def search_services():
-    a = request.args.get
-    q = a('q')
-    page = a('page')
-    return Service.search(q, page)
+    j = request.json.get
+    q = j('q') or ''
+    page = j('page')
+    filters = j('filters')
+    position = j('position')
+    return Service.search(q, page, filters, position)
 
 @bp.route('/services', methods=['POST'])
 @jwt_required
@@ -23,6 +26,11 @@ def add_service():
     price = q('price')
     paid_in = q('paid_in')
     s = Service(json, token, name, s_class_id, fields, about, price, paid_in)
+    if not s:
+        return {}, 401
+    fields = fields + json
+    for f in fields:
+        add_field(f['name'])
     return jsonify({'service': s.dict()})
 
 @bp.route('/service/viewed/<int:id>', methods=['PUT'])

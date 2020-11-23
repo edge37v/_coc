@@ -1,5 +1,7 @@
 from app import db
 from flask import jsonify
+from geopy import distance
+from app.models import Field
 from sqlalchemy_utils.types import TSVectorType
 from app.models import PageMixin, Query, User, cdict
 
@@ -267,6 +269,8 @@ class Service(PageMixin, db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     category_id = db.Column(db.Integer, db.ForeignKey('s_category.id'))
     archived = db.Column(db.Boolean, default=False)
+    location = db.Column(db.JSON)
+    distance = db.Column(db.Float)
     viewed = db.Column(db.JSON)
     price = db.Column(db.Unicode)
     fields = db.Column(db.JSON)
@@ -328,9 +332,27 @@ class Service(PageMixin, db.Model):
         return {}, 202
 
     @staticmethod
-    def search(q, page):
+    def search(q, page, filters, position):
         services = Service.query.search('"' + q + '"', sort=True)
+        if position:
+            print('position')
+            services = location_sort(services, position)
+        for f in filters:
+            services = services.filter(Service.fields[f['name']] == f['value'])
         return cdict(services, page)
+
+    @staticmethod
+    def location_sort(query, target):
+        for service in query:
+            subject = (service.location['latitude'], service.location['longitude'])
+            target = (target['latitude'], target['longitude'])
+            service.distance = distance(subject, target)
+        db.session.commit()
+        return query.order_by(Service.distance.desc())
+
+    @staticmethod
+    def distance(p1, p2):
+        return distance.distance(p1, p2)
 
     def dict(self):
         data = {
@@ -351,8 +373,8 @@ class Service(PageMixin, db.Model):
 
     def __init__(self, json, token, name, s_class_id, fields, about, price, paid_in):
         user = User.query.filter_by(token=token).first()
-        if not user:
-            pass
+        if user == None:
+            return None
         s_class = SClass.query.get(s_class_id)
         self.user = user
         self.name = name

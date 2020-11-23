@@ -37,18 +37,15 @@ def user_saved_items():
     page = request.args.get('page')
     return cdict(user.saved_services, page)
 
-@bp.route('/users/search', methods=['GET'])
-def user_search():
-    print(request.args)
-    a = request.args.get
-    q = a('q')
-    id = q('id')
-    location = a('location')
-    s_page = a('s_page')
-    p_page = a('p_page')
-    return User.search(location, id, q, s_page, p_page)
+@bp.route('/users/search', methods=['PUT'])
+def search_users():
+    j = request.json.get
+    q = j('q') or ''
+    page = j('page')
+    position = j('position')
+    return User.search(q, page, position)
 
-@bp.route('/users/<int:id>', methods=['GET'])
+@bp.route('/user/<int:id>', methods=['GET'])
 def user(id):
     user = User.query.get_or_404(id)
     return jsonify(user.qdict())
@@ -65,24 +62,24 @@ def get_users():
 def create_user():
     q = request.get_json()
     errors = []
-    email = q['email']
+    username = q['username']
     password = q['password']
-    if email is None:
-        errors.append('Email required')
+    if username is None:
+        errors.append({'id': 1, 'kind': 'error', 'title': 'You must provide an username'})
         return jsonify({'errors': errors})
     if password is None:
-        errors.append('Password required')
+        errors.append({'id': 1, 'kind': 'error', 'title': 'You must provide a password'})
         return jsonify({'errors': errors})
-    if User.query.filter_by(email=email).first():
-        errors.append('Email taken')
+    if User.query.filter_by(username=username).first():
+        errors.append({'id': 1, 'kind': 'error', 'title': 'username taken'})
         return jsonify({'errors': errors})
-    user = User(email, password)
-    user.token = create_access_token(identity=email)
+    user = User(username, password)
+    user.token = create_access_token(identity=username)
     res = jsonify({'user': user.dict()})
     res.status_code = 201
     return res
 
-@bp.route('/users/<int:id>', methods=['PUT'])
+@bp.route('/user/<int:id>', methods=['PUT'])
 @jwt_required
 def edit_user(id):
     errors = []
@@ -92,10 +89,12 @@ def edit_user(id):
     data = request.get_json()
     if user != User.query.filter_by(token = token).first():
         return {}, 401
-    if 'email' in data and data['email'] != user.email and \
-            User.query.filter_by(email=data['email']).first():
-        errors.append('Email taken')
+    if 'username' in data and data['username'] != user.username and \
+            User.query.filter_by(username=data['username']).first():
+        errors.append('username taken')
         return {'errors': errors}
     user.from_dict(data)
+    for service in user.services:
+        service.location = user.location
     db.session.commit()
     return {'user': user.dict()}

@@ -110,6 +110,8 @@ class PageMixin(object):
         return data
 
 class Field(db.Model):
+    query_class = Query
+    search_vector = db.Column(TSVectorType('text'))
     id = db.Column(db.Integer, primary_key=True)
     text = db.Column(db.Unicode)
 
@@ -263,15 +265,19 @@ saved_forumposts = db.Table('saved_forumposts',
     db.Column('forumpost_id', db.Integer, db.ForeignKey('forumpost.id')))
 
 class User(PageMixin, UserMixin, db.Model):
-    __searchable__ = ['name', 'email', 'phone', ]
+    query_class = Query
+    search_vector = db.Column(
+        TSVectorType(
+            'username', 'name', weights={'username': 'A', 'name': 'B'}))
+    username = db.Column(db.Unicode)
+
+    individual = db.Column(db.Boolean)
+
     id = db.Column(db.Integer, primary_key=True)
-    ls = db.Column(db.Unicode)
-    ly = db.Column(db.Unicode)
+    custom = db.Column(db.JSON)
     tokens = db.relationship(Token, backref='user', lazy='dynamic')
-    l_access = db.Column(db.Boolean(), default=False)
-    lat = db.Column(db.Float)
-    lon = db.Column(db.Float)
     location = db.Column(db.JSON)
+    distance = db.Column(db.Float)
     openby = db.Column(db.DateTime)
     closeby = db.Column(db.DateTime)
 
@@ -291,7 +297,7 @@ class User(PageMixin, UserMixin, db.Model):
     distance = db.Column(db.Unicode)
     logo_url = db.Column(db.Unicode)
     customer_code = db.Column(db.Unicode)
-    email = db.Column(db.Unicode(123), unique=True)
+    username = db.Column(db.Unicode(123), unique=True)
 
     visible = db.Column(db.Boolean, default=False)
     
@@ -306,52 +312,30 @@ class User(PageMixin, UserMixin, db.Model):
     token = db.Column(db.String(373), index=True, unique=True)
     marketlnx = db.Column(db.Boolean, default=False)
 
-    def set_distance(self, distance):
-        self.distance = distance
-        db.session.add(self)
+    @staticmethod
+    def search(q, page, position):
+        users = User.query.search('"' + q + '"', sort=True)
+        print(users)
+        if position:
+            print('position')
+            users = location_sort(users, position)
+        return cdict(users, page)
+
+    @staticmethod
+    def location_sort(query, target):
+        for user in query:
+            subject = (user.location['latitude'], user.location['longitude'])
+            target = (target['latitude'], target['longitude'])
+            user.distance = distance(subject, target)
         db.session.commit()
-
-    def edit_location(self, lat, lon):
-        self.longitude = lon
-        self.latitude = lat
-        db.session.add(self)
-        db.session.commit()
+        return query.order_by(User.distance.desc())
 
     @staticmethod
-    def distance(lat, lon, e2):
-        e1 = (lat, lon)
-        e2 = (e2.lat, e2.lon)
-        return distance.distance(e1, e2).miles
+    def distance(p1, p2):
+        return distance.distance(p1, p2)
 
-    @staticmethod
-    def sort(lat, lon, query):
-        for i in range(1, query.count()+1):
-            user = User.query.get(i)
-            user.set_distance(User.distance(lat, lon, user))
-        return query.order_by(User.distance.desc())  
-
-    """def get_token(self, expires_in=36000):
-        now = datetime.utcnow()
-        if self.token and self.token_expiration > now + timedelta(seconds=60):
-            return self.token
-        self.token = base64.b64encode(os.urandom(24)).decode('utf-8')
-        self.token_expiration = now + timedelta(seconds=expires_in)
-        db.session.add(self)
-        return self.token
-
-    def revoke_token(self):
-        self.token_expiration = datetime.utcnow() - timedelta(seconds=1)
-
-    @staticmethod
-    def check_token(token):
-        user = User.query.filter_by(token=token).first()
-        if user is None or user.token_expiration < datetime.utcnow():
-            return None
-        return user
-    """
-
-    def __init__(self, email, password):
-        self.email=email
+    def __init__(self, username, password):
+        self.username=username
         self.set_password(password)
         db.session.add(self)
         db.session.commit()
@@ -370,7 +354,7 @@ class User(PageMixin, UserMixin, db.Model):
         return User.query.get(id)
 
     def __repr__(self):
-        return 'email: {}'.format(self.email)
+        return 'username: {}'.format(self.username)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -387,11 +371,11 @@ class User(PageMixin, UserMixin, db.Model):
         data = {
             'id': self.id,
             'name': self.name,
-            'email': self.email,
+            'username': self.username,
             'token': self.token
         }
-        if self.location == None:
-            data['location'] = self.location.first().name
+        if self.location != None:
+            data['location'] = self.location
         return data
 
     def qdict(self):
@@ -399,7 +383,7 @@ class User(PageMixin, UserMixin, db.Model):
             'id': self.id,
             'name': self.name,
             'phone': self.phone,
-            'email': self.email,
+            'username': self.username,
             'about': self.about,
             'website': self.website,
             'token': self.token,
@@ -408,17 +392,17 @@ class User(PageMixin, UserMixin, db.Model):
             'services': cdict(self.services),
             'products': cdict(self.products)
         }
-        if self.location == None:
-            data['location'] = self.location.first().name
+        if self.location != None:
+            data['location'] = self.location
         return data
 
     def from_dict(self, data):
-        self.email = data['email']
+        self.username = data['username']
         self.name = data['name']
         self.about = data['about']
         self.phone = data['phone']
         self.website = data['website']
-        self.location = data('location')
+        self.location = data['location']
         if 'password' in data:
             self.set_password(data['password'])
         db.session.add(self)

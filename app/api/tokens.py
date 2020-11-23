@@ -13,19 +13,19 @@ def get_token():
     headers = Headers()
     errors = []
     headers.add('Access-Control-Allow-Origin', request.headers.get('Origin'))
-    email = q['email']
+    username = q['username']
     password = q['password']
-    user = User.query.filter_by(email=email).first()
+    user = User.query.filter_by(username=username).first()
     if not user:
-        errors.append('User does not exist')
+        errors.append({'id': 1, 'kind': 'error', 'title': 'User with that username does not exist'})
         return jsonify({'errors': errors})
     if not user.check_password(password):
-        errors.append('Wrong Password')
+        errors.append({'id': 1, 'kind': 'error', 'title': 'Wrong password'})
         return jsonify({'errors': errors})
     #if not user.confirmed:
      #   errors.append('User is not subscribed')
       #  return jsonify({'errors': errors})
-    user.token = create_access_token(identity=email)
+    user.token = create_access_token(identity=username)
     g.current_user = user
     db.session.add(user)
     db.session.commit()
