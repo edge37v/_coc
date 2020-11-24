@@ -1,7 +1,7 @@
 from app.api import bp
 from app.service_models import Service
-import add_field from app.api.fields
-from flask import request, jsonify, url_foe
+from app.api.fields import add_field
+from flask import request, jsonify
 from flask_jwt_extended import jwt_required
 
 @bp.route('/services/search', methods=['PUT'])
@@ -20,12 +20,12 @@ def add_service():
     token = request.headers['Authorization']
     name = q('name')
     json = q('json')
-    s_class_id = q('s_class_id')
+    s_class_ids = q('s_class_id')
     fields = q('fields')
     about = q('about')
     price = q('price')
     paid_in = q('paid_in')
-    s = Service(json, token, name, s_class_id, fields, about, price, paid_in)
+    s = Service(json, token, name, s_class_ids, fields, about, price, paid_in)
     if not s:
         return {}, 401
     fields = fields + json

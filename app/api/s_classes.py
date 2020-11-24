@@ -28,21 +28,22 @@ def edit_s_classes():
     paid_in = q('paid_in')
     return SClass.edit(id, token, name, fields, paid_in)
 
-@bp.route('/s_classes/qsearch', methods=['GET'])
+@bp.route('/s_classes/qsearch/<q>/<page>', methods=['GET'])
 @jwt_required
-def search_s_classes_q():
+def search_s_classes_q(q, page):
     token = request.headers['Authorization']
-    a = request.args.get
-    q = a('q')
-    page = a('page')
     return SClass.qsearch(q, page, token)
 
-@bp.route('/s_classes/search', methods=['GET'])
+@bp.route('/s_classes/search/<q>', methods=['GET'])
 @jwt_required
-def search_s_classes():
+def search_s_classes(q):
     token = request.headers['Authorization']
-    q = request.args.get('q')
     return SClass.search(q, token)
+
+@bp.route('/s_classes/global/search/<q>', methods=['GET'])
+@jwt_required
+def search_s_classes(q):
+    return SClass.global_search(q)
 
 @bp.route('/s_classes', methods=['POST'])
 @jwt_required
@@ -73,15 +74,13 @@ def remove_service_from_class():
     class_id = j('class_id')
     SClass.remove(service_id, class_id)
 
-@bp.route('/s_classes/get_fields', methods=['GET'])
-@jwt_required
-def get_s_class_fields():
-    id = request.args.get('id')
+@bp.route('/s_classes/get_s/<int:id>', methods=['GET'])
+def get_s_class_fields(id):
     if float(id) < 1:
         return {}
     s_class = SClass.query.get(id)
     if s_class:
-        return jsonify(s_class.fields)
+        return jsonify({'name': s_class.name, 'fields': s_class.fields})
     return {}
 
 @bp.route('/s_classes/<int:id>', methods=['GET'])

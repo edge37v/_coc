@@ -13,6 +13,10 @@ service_categories = db.Table('service_categories',
     db.Column('s_category_id', db.Integer, db.ForeignKey('s_category.id')),
     db.Column('service_id', db.Integer, db.ForeignKey('service.id')))
 
+service_classes = db.Table('service_classes',
+    db.Column('service_id', db.Integer, db.ForeignKey('service.id')),
+    db.Column('s_class_id', db.Integer, db.ForeignKey('s_class.id')))
+
 class SCategory(PageMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode)
@@ -147,10 +151,22 @@ class SClass(PageMixin, db.Model):
     json = db.Column(db.JSON)
     about = db.Column(db.Unicode)
     fields = db.Column(db.JSON)
+    world = db.Column(db.Boolean)
     archived = db.Column(db.Boolean, default=False)
-    services = db.relationship('Service', backref='s_class', lazy='dynamic')
+    #services = db.relationship('Service', backref='s_class', lazy='dynamic')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     paid_in = db.Column(db.Unicode)
+
+    @staticmethod
+    def search(q, token):
+        user = User.query.filter_by(token=token).first()
+        query = SClass.query.search('"' + q + '"', sort=True).filter_by(user=user)
+        return jsonify([{'id': s.id, 'text': s.name} for s in query])
+
+    @staticmethod
+    def global_search(q):
+        query = SClass.query.search('"' + q + '"', sort=True).filter_by(global=True)
+        return jsonify([{'id': s.id, 'text': s.name} for s in query])
 
     @staticmethod
     def qsearch(q, page, token):
@@ -158,7 +174,7 @@ class SClass(PageMixin, db.Model):
         return cdict(SClass.query.search('"' + q + '"', sort=True).filter(Sclass.user == user), page)
 
     @staticmethod
-    def search(q, token):
+    def _search(q, token):
         user = User.query.filter_by(token=token).first()
         if '*' in q or '_' in q:
             _q = q.replace('_', '__')\
@@ -265,9 +281,9 @@ class Service(PageMixin, db.Model):
         TSVectorType(
             'name', 'about', weights={'name': 'A', 'about': 'B'}))
     id = db.Column(db.Integer, primary_key=True)
-    s_class_id = db.Column(db.Integer, db.ForeignKey('s_class.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     category_id = db.Column(db.Integer, db.ForeignKey('s_category.id'))
+    s_classes = db.relationship('SClass', secondary='service_classes', backref=db.backref('services', lazy=True), lazy='dynamic')
     archived = db.Column(db.Boolean, default=False)
     location = db.Column(db.JSON)
     distance = db.Column(db.Float)
@@ -278,6 +294,17 @@ class Service(PageMixin, db.Model):
     name = db.Column(db.Unicode)
     about = db.Column(db.Unicode)
     paid_in = db.Column(db.Unicode)
+
+    def custom_dict(self, *args):
+        data = {}
+        for field in args:
+            if field == 's_classes':
+                data['s_classes'] = cdict(self.s_classes)
+            if field == 'user':
+                data['user'] = self.user.dict()
+            else:
+                data[field] = self.name
+        return data
 
     @staticmethod
     def archive(id, token):
@@ -338,7 +365,7 @@ class Service(PageMixin, db.Model):
             print('position')
             services = location_sort(services, position)
         for f in filters:
-            services = services.filter(Service.fields[f['name']] == f['value'])
+            services = services.filter(Service.fields[0][f['name']] == f['value'])
         return cdict(services, page)
 
     @staticmethod
@@ -361,6 +388,7 @@ class Service(PageMixin, db.Model):
             'name': self.name,
             'about': self.about,
             'user': self.user.dict(),
+            's_classes': cdict(self.s_classes),
             'paid_in': self.paid_in
         }
         if self.s_class:
@@ -371,11 +399,13 @@ class Service(PageMixin, db.Model):
     def exists(user, name):
         return Service.query.filter_by(user_id = user.id).count()>0
 
-    def __init__(self, json, token, name, s_class_id, fields, about, price, paid_in):
+    def __init__(self, json, token, name, s_class_ids, fields, about, price, paid_in):
         user = User.query.filter_by(token=token).first()
         if user == None:
             return None
-        s_class = SClass.query.get(s_class_id)
+        for id in s_class_ids:
+            s_class = SClass.query.get(id)
+            self.s_classes.append(s_class)
         self.user = user
         self.name = name
         self.s_class = s_class
