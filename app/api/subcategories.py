@@ -8,7 +8,7 @@ from flask_jwt_extended import jwt_required
 def delete_subcategory():
 	id = request.args.get(id)
 	Subcategory.query.get(id).delete()
-	return jsonify({'202': True})
+	return jsonify({'yes': True})
 
 @bp.route('/subcategories', methods=['POST'])
 @jwt_required

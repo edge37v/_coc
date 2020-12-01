@@ -8,7 +8,7 @@ from flask_jwt_extended import jwt_required
 def delete_category():
 	id = request.args.get('id')
 	Category.query.get(id).delete()
-	return jsonify({'202': True})
+	return jsonify({'yes': True})
 
 @bp.route('/categories', methods=['GET'])
 def get_category():

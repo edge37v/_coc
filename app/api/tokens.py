@@ -22,4 +22,4 @@ def get_token():
 @jwt_required
 def revoke_token():
     token = request.headers.get('Authorization')
-    return jsonify({'202': True})
+    return jsonify({'yes': True})
