@@ -1,7 +1,6 @@
 import os, logging
 from flask_jwt_extended import JWTManager
 from flask_cors import CORS
-from elasticsearch import Elasticsearch
 from logging.handlers import SMTPHandler, RotatingFileHandler
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy_searchable import make_searchable
@@ -27,8 +26,6 @@ def create_app():
     jwt.init_app(app)
     migrate.init_app(app, db)
     mail.init_app(app)
-
-    app.elasticsearch = Elasticsearch('http://localhost:9200')
 
     from app.api import bp
     app.register_blueprint(bp)

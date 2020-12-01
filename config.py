@@ -5,13 +5,15 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 load_dotenv(os.path.join(basedir, '.env'))
 
 class Config(object):
+    SYSTEM_PASSWORD = 'thirtyseven'
     SECRET_KEY='dev'
     USERS_PER_PAGE = 10
     ELASTICSEARCH_URL = os.environ.get('ELASTICSEARCH_URL') or \
         'http://localhost:9200'
-    FRONT_END = os.environ.get('FRONT_END')
+    FRONT_END = os.environ.get('FRONT_END') or \
+        'https://localhost:443'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://postgres:love@localhost:5432/marketlinks'
+        'postgresql://postgres:love@localhost:5432/the_truth'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     CORS_HEADERS = 'Content-Type'
     LANGUAGES = ['en', 'es']
