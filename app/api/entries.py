@@ -10,12 +10,12 @@ def delete_entry():
 	Entry.query.get(id).delete()
 	return jsonify({'yes': True})
 
-@bp.route('/entries/from_subcategory', methods=['GET'])
-def get_entries_from_subcategory():
+@bp.route('/entries/from_subtopic', methods=['GET'])
+def get_entries_from_subtopic():
 	a = request.args.get
 	id = a('id')
 	page = a('page')
-	return jsonify(cdict(Entry.query.filter_by(subcategory_id=id), page))
+	return jsonify(cdict(Entry.query.filter_by(subtopic_id=id), page))
 
 @bp.route('/entries', methods=['POST'])
 @jwt_required
