@@ -28,9 +28,8 @@ def ccdict(queries, page=1, per_page=37):
     start = (page-1) * per_page
     end = per_page
     data['data'] = dlist[start:end]
-    data['total_pages'] = math.ceil(len(dlist)*37),
+    data['total_pages'] = math.ceil(len(dlist)*37)
     data['total_items'] = len(dlist)
-    }
     return data
 
 def cdict(query, page=1, per_page=37, endpoint='', **kwargs):
