@@ -3,6 +3,16 @@ from flask import request, jsonify
 from app.models import Entry, cdict
 from flask_jwt_extended import jwt_required
 
+@bp.route('/entries', methods=['PUT'])
+@jwt_required
+def edit_entry():
+	j = request.json.get
+	id = j('id')
+	verses = j('verses')
+	name = j('name')
+	Entry.edit(id, verses, name, body)
+	return jsonify({'yes': True})
+
 @bp.route('/entries', methods=['DELETE'])
 @jwt_required
 def delete_entry():

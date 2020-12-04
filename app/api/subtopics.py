@@ -3,6 +3,15 @@ from flask import request, jsonify
 from app.models import Subtopic, cdict
 from flask_jwt_extended import jwt_required
 
+@bp.route('/subtopics', methods=['PUT'])
+@jwt_required
+def edit_subtopic():
+	j = request.json.get
+	id = j('id')
+	name = j('name')
+	Subtopic.edit(id, name)
+	return jsonify({'yes': True})
+
 @bp.route('/subtopics', methods=['DELETE'])
 @jwt_required
 def delete_subtopic():

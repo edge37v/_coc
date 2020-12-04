@@ -3,6 +3,15 @@ from flask import request, jsonify
 from app.models import Topic, cdict
 from flask_jwt_extended import jwt_required
 
+@bp.route('/topics', methods=['PUT'])
+@jwt_required
+def edit_topic():
+	j = request.json.get
+	id = j('id')
+	name = j('name')
+	Topic.edit(id, name)
+	return jsonify({'yes': True})
+
 @bp.route('/topics', methods=['DELETE'])
 @jwt_required
 def delete_topic():

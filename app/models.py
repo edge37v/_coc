@@ -17,16 +17,15 @@ from werkzeug.security import check_password_hash, generate_password_hash
 class Query(BaseQuery, SearchQueryMixin):
     pass
 
-db.configure_mappers()
-
 #combines items in a query-list as a list
 def ccdict(queries, page=1, per_page=37):
     data = {}
     dlist = []
     for query in queries:
         dlist = dlist + [item.dict() for item in query]
-    start = (page-1) * per_page
+    start = int(page) * int(per_page)
     end = per_page
+    print(start, end)
     data['data'] = dlist[start:end]
     data['total_pages'] = math.ceil(len(dlist)*37)
     data['total_items'] = len(dlist)
@@ -53,9 +52,17 @@ class Entry(db.Model):
     name = db.Column(db.Unicode, unique=True)
     body = db.Column(db.Unicode)
     verses = db.Column(db.JSON)
-    score = db.Column(db.Integer)
+    rank = db.Column(db.Integer)
     type = db.Column(db.Unicode)
     subtopic_id = db.Column(db.Integer, db.ForeignKey('subtopic.id'))
+
+    @staticmethod
+    def edit(id, verses=None, name=None, body=None):
+        entry = Entry.query.get(id)
+        entry.verses = verses or entry.verses
+        entry.name = name or entry.name
+        entry.body = body or entry.body
+        db.session.commit()
 
     def delete(self):
         db.session.delete(self)
@@ -67,7 +74,7 @@ class Entry(db.Model):
             'name': self.name,
             'body': self.body,
             'verses': self.verses,
-            'score': self.score,
+            'rank': self.rank,
             'type': self.type,
         }
         return data
@@ -87,10 +94,15 @@ class Subtopic(db.Model):
     search_vector = db.Column(TSVectorType('name'))
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode, unique=True)
-    score = db.Column(db.Integer)
+    rank = db.Column(db.Integer)
     type = db.Column(db.Unicode)
     topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'))
     entries = db.relationship('Entry', backref='subtopic', lazy='dynamic')
+
+    @staticmethod
+    def edit(id, name):
+        Subtopic.query.get(id).name = name
+        db.session.commit()
 
     def delete(self):
         for entry in self.entry:
@@ -110,7 +122,7 @@ class Subtopic(db.Model):
         data = {
             'id': self.id,
             'name': self.name,
-            'score': self.score,
+            'rank': self.rank,
             'type': self.type
         }
         return data
@@ -120,9 +132,14 @@ class Topic(db.Model):
     search_vector = db.Column(TSVectorType('name'))
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode, unique=True)
-    score = db.Column(db.Integer)
+    rank = db.Column(db.Integer)
     type = db.Column(db.Unicode)
     subtopics = db.relationship('Subtopic', backref='topic', lazy='dynamic')
+
+    @staticmethod
+    def edit(id, name):
+        Topic.query.get(id).name = name
+        db.session.commit()
 
     def delete(self):
         for subtopic in self.subtopics:
@@ -134,7 +151,7 @@ class Topic(db.Model):
         data = {
             'id': self.id,
             'name': self.name,
-            'score': self.score,
+            'rank': self.rank,
             'type': self.type
         }
         return data
