@@ -54,6 +54,7 @@ class Entry(db.Model):
     verses = db.Column(db.JSON)
     rank = db.Column(db.Integer)
     type = db.Column(db.Unicode)
+    type_plural = db.Column(db.Unicode)
     subtopic_id = db.Column(db.Integer, db.ForeignKey('subtopic.id'))
 
     @staticmethod
@@ -76,6 +77,8 @@ class Entry(db.Model):
             'verses': self.verses,
             'rank': self.rank,
             'type': self.type,
+            'subtopic_id': self.subtopic_id
+            'type_plural': self.type_plural
         }
         return data
 
@@ -86,6 +89,7 @@ class Entry(db.Model):
         self.name = name
         self.body = body,
         self.type = 'entry'
+        self.type_plural = 'entries'
         db.session.add(self)
         db.session.commit()
 
@@ -96,6 +100,7 @@ class Subtopic(db.Model):
     name = db.Column(db.Unicode, unique=True)
     rank = db.Column(db.Integer)
     type = db.Column(db.Unicode)
+    type_plural = db.Column(db.Unicode)
     topic_id = db.Column(db.Integer, db.ForeignKey('topic.id'))
     entries = db.relationship('Entry', backref='subtopic', lazy='dynamic')
 
@@ -115,6 +120,7 @@ class Subtopic(db.Model):
         self.name = name
         self.topic = topic
         self.type = 'subtopic'
+        self.type_plural = 'subtopics'
         db.session.add(self)
         db.session.commit()  
 
@@ -123,7 +129,8 @@ class Subtopic(db.Model):
             'id': self.id,
             'name': self.name,
             'rank': self.rank,
-            'type': self.type
+            'type': self.type,
+            'type_plural': self.type_plural
         }
         return data
 
@@ -134,6 +141,7 @@ class Topic(db.Model):
     name = db.Column(db.Unicode, unique=True)
     rank = db.Column(db.Integer)
     type = db.Column(db.Unicode)
+    type_plural = db.Column(db.Unicode)
     subtopics = db.relationship('Subtopic', backref='topic', lazy='dynamic')
 
     @staticmethod
@@ -152,12 +160,14 @@ class Topic(db.Model):
             'id': self.id,
             'name': self.name,
             'rank': self.rank,
-            'type': self.type
+            'type': self.type,
+            'type_plural': self.type_plural
         }
         return data
 
     def __init__(self, name):
         self.name = name
         self.type = 'topic'
+        self.type_plural = 'topics'
         db.session.add(self)
         db.session.commit()    

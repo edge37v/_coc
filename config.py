@@ -13,7 +13,7 @@ class Config(object):
     FRONT_END = os.environ.get('FRONT_END') or \
         'https://localhost:443'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
-        'postgresql://postgres:love@localhost:5432/the_truth'
+        'postgresql://postgres:love@localhost:5432/truth'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     CORS_HEADERS = 'Content-Type'
     LANGUAGES = ['en', 'es']
