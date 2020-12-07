@@ -77,7 +77,7 @@ class Entry(db.Model):
             'verses': self.verses,
             'rank': self.rank,
             'type': self.type,
-            'subtopic_id': self.subtopic_id
+            'subtopic_id': self.subtopic_id,
             'type_plural': self.type_plural
         }
         return data
@@ -110,7 +110,7 @@ class Subtopic(db.Model):
         db.session.commit()
 
     def delete(self):
-        for entry in self.entry:
+        for entry in self.entries:
             db.session.delete(entry)
         db.session.delete(self)
         db.session.commit()

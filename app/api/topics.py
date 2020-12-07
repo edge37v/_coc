@@ -32,8 +32,8 @@ def add_topic():
 	if Topic.query.filter_by(name=name).first():
 		errors.append('Topic with that name already exists')
 		return jsonify({'errors': errors})
-	Topic(name)
-	return jsonify({'yes': True})
+	id = Topic(name).id
+	return jsonify({'id': id})
 
 @bp.route('/topics/search', methods=['GET'])
 def search_topics():

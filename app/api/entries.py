@@ -8,6 +8,7 @@ from flask_jwt_extended import jwt_required
 def edit_entry():
 	j = request.json.get
 	id = j('id')
+	body = j('body')
 	verses = j('verses')
 	name = j('name')
 	Entry.edit(id, verses, name, body)
@@ -32,7 +33,7 @@ def get_entries_from_subtopic():
 def add_entry():
 	errors = []
 	j = request.json.get
-	id = j('d')
+	id = j('id')
 	verses = j('verses')
 	name = j('name')
 	if Entry.query.filter_by(name=name).first():

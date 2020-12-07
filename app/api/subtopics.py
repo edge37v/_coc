@@ -25,9 +25,6 @@ def add_subtopic():
 	errors = []
 	j = request.json.get
 	name = j('name')
-	if Subtopic.query.filter_by(name=name).first():
-		errors.append('Subtopic with that name already exists')
-		return jsonify({'errors': errors})
 	id = j('id')
 	subtopic = Subtopic(name, id)
 	return jsonify({'subtopic': subtopic.dict()})
